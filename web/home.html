@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Graph'AD</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+
+        /* ── Layout général ─────────────────────────────────────── */
+        body {
+            min-height: 100vh;
+            background: var(--bg);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 48px 24px 64px;
+            font-family: system-ui, sans-serif;
+        }
+
+        /* ── En-tête ────────────────────────────────────────────── */
+        .home-header {
+            text-align: center;
+            margin-bottom: 48px;
+        }
+        .home-header h1 {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--text);
+            letter-spacing: -0.5px;
+            margin-bottom: 6px;
+        }
+        .home-header h1 span { color: #2196F3; }
+        .home-header p {
+            font-size: 14px;
+            color: var(--link);
+        }
+
+        /* ── Conteneur principal ────────────────────────────────── */
+        .home-container {
+            width: 100%;
+            max-width: 720px;
+            display: flex;
+            flex-direction: column;
+            gap: 32px;
+        }
+
+        /* ── Section ────────────────────────────────────────────── */
+        .section-title {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--link);
+            margin-bottom: 12px;
+        }
+
+        /* ── Liste des fichiers JSON ─────────────────────────────── */
+        #file-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .file-entry {
+            display: flex;
+            align-items: center;
+            background: var(--panel);
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            padding: 14px 16px;
+            gap: 12px;
+            transition: box-shadow 0.15s ease;
+        }
+        :root.dark .file-entry { border-color: #3a3a3a; }
+        .file-entry:hover { box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
+
+        .file-icon {
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        .file-info {
+            flex: 1;
+            min-width: 0;
+        }
+        .file-info .file-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .file-info .file-path {
+            font-size: 11px;
+            color: var(--link);
+            margin-top: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .file-actions {
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        /* ── Boutons ─────────────────────────────────────────────── */
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 7px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.15s ease, transform 0.1s ease;
+        }
+        .btn:hover  { opacity: 0.88; }
+        .btn:active { transform: scale(0.97); }
+
+        .btn-primary   { background: #2196F3; color: #fff; }
+        .btn-danger    { background: #FEE2E2; color: #DC2626; }
+        .btn-secondary {
+            background: var(--toolbar-bg);
+            color: var(--text);
+            border: 1px solid #d1d5db;
+        }
+        :root.dark .btn-secondary { border-color: #444; }
+        .btn-ghost {
+            background: transparent;
+            color: var(--link);
+            border: 1px solid #d1d5db;
+        }
+        :root.dark .btn-ghost { border-color: #444; }
+
+        .btn-lg {
+            padding: 11px 24px;
+            font-size: 14px;
+            border-radius: 9px;
+        }
+
+        /* ── État vide ───────────────────────────────────────────── */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            background: var(--panel);
+            border: 2px dashed #d1d5db;
+            border-radius: 12px;
+            color: var(--link);
+        }
+        :root.dark .empty-state { border-color: #444; }
+        .empty-state .empty-icon { font-size: 36px; margin-bottom: 12px; }
+        .empty-state p { font-size: 14px; line-height: 1.6; }
+
+        /* ── Section nouvelle collecte ───────────────────────────── */
+        .collect-card {
+            background: var(--panel);
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 24px;
+        }
+        :root.dark .collect-card { border-color: #3a3a3a; }
+
+        .collect-card .collect-desc {
+            font-size: 13px;
+            color: var(--link);
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+
+        .passphrase-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        @media (max-width: 520px) {
+            .passphrase-row { grid-template-columns: 1fr; }
+        }
+
+        .field-group label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--link);
+            margin-bottom: 6px;
+        }
+        .field-group input[type=password] {
+            width: 100%;
+            padding: 9px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 7px;
+            font-size: 13px;
+            background: var(--bg);
+            color: var(--text);
+            outline: none;
+            transition: border-color 0.2s;
+            box-sizing: border-box;
+        }
+        :root.dark .field-group input[type=password] {
+            border-color: #444;
+        }
+        .field-group input[type=password]:focus {
+            border-color: #2196F3;
+            box-shadow: 0 0 0 3px rgba(33,150,243,0.12);
+        }
+
+        .collect-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .collect-hint {
+            font-size: 12px;
+            color: var(--link);
+        }
+
+        /* ── Modale phrase de passe (ouverture fichier) ──────────── */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(3px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-overlay.visible { display: flex; }
+
+        .modal-box {
+            background: var(--bg);
+            border-radius: 14px;
+            padding: 32px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+            position: relative;
+        }
+        .modal-box h2 {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+        .modal-box .modal-sub {
+            font-size: 13px;
+            color: var(--link);
+            margin-bottom: 24px;
+            line-height: 1.5;
+        }
+        .modal-box .modal-file-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #2196F3;
+            background: rgba(33,150,243,0.08);
+            padding: 4px 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            display: inline-block;
+        }
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .modal-actions .btn { flex: 1; }
+
+        /* ── Barre de progression collecte ──────────────────────── */
+        .progress-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.55);
+            backdrop-filter: blur(3px);
+            z-index: 1100;
+            align-items: center;
+            justify-content: center;
+        }
+        .progress-overlay.visible { display: flex; }
+
+        .progress-box {
+            background: var(--bg);
+            border-radius: 14px;
+            padding: 32px;
+            width: 100%;
+            max-width: 460px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+        }
+        .progress-box h2 {
+            font-size: 17px;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+        .progress-box .progress-step {
+            font-size: 13px;
+            color: var(--link);
+            margin-bottom: 20px;
+            min-height: 20px;
+        }
+        .progress-bar-track {
+            height: 8px;
+            background: var(--panel);
+            border-radius: 99px;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+        :root.dark .progress-bar-track { background: #333; }
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #2196F3, #64B5F6);
+            border-radius: 99px;
+            width: 0%;
+            transition: width 0.4s ease;
+        }
+        .progress-counter {
+            font-size: 11px;
+            color: var(--link);
+            text-align: right;
+        }
+        .progress-error {
+            display: none;
+            margin-top: 16px;
+            padding: 12px;
+            background: #FEE2E2;
+            border-radius: 8px;
+            font-size: 13px;
+            color: #DC2626;
+            line-height: 1.5;
+        }
+        .progress-error.visible { display: block; }
+
+        /* ── Bouton quitter (bas de page) ────────────────────────── */
+        .home-footer {
+            margin-top: 16px;
+            text-align: center;
+        }
+
+        /* ── Toast erreur ────────────────────────────────────────── */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: #1e1e1e;
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 13px;
+            opacity: 0;
+            transition: opacity 0.2s, transform 0.2s;
+            pointer-events: none;
+            z-index: 2000;
+        }
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- Menu burger (partagé) -->
+    <script src="js/shared-menu.js"></script>
+
+    <!-- En-tête -->
+    <div class="home-header">
+        <h1>Graph<span>'AD</span></h1>
+        <p>Cartographie et analyse de votre Active Directory</p>
+    </div>
+
+    <div class="home-container">
+
+        <!-- ── Section : fichiers disponibles ── -->
+        <div id="section-files">
+            <div class="section-title">Collectes disponibles</div>
+            <div id="file-list">
+                <!-- rempli par JS -->
+            </div>
+        </div>
+
+        <!-- ── Section : nouvelle collecte ── -->
+        <div id="section-collect">
+            <div class="section-title">Nouvelle collecte</div>
+            <div class="collect-card">
+                <p class="collect-desc">
+                    Interroge l'Active Directory de cette machine et génère un nouveau fichier chiffré.
+                    La collecte nécessite d'être lancée depuis un contrôleur de domaine.
+                </p>
+                <div class="passphrase-row">
+                    <div class="field-group">
+                        <label for="pp-new">Phrase de passe</label>
+                        <input type="password" id="pp-new" placeholder="12 caractères minimum" autocomplete="new-password">
+                    </div>
+                    <div class="field-group">
+                        <label for="pp-confirm">Confirmation</label>
+                        <input type="password" id="pp-confirm" placeholder="Confirmez la phrase" autocomplete="new-password">
+                    </div>
+                </div>
+                <div class="collect-footer">
+                    <span class="collect-hint" id="collect-hint"></span>
+                    <button class="btn btn-primary btn-lg" id="btn-collect" onclick="startCollect()">
+                        Lancer la collecte
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Bouton quitter ── -->
+        <div class="home-footer">
+            <button class="btn btn-ghost" onclick="quitApp()">Quitter Graph'AD</button>
+        </div>
+
+    </div>
+
+    <!-- ── Modale : saisie phrase de passe pour ouvrir un fichier ── -->
+    <div class="modal-overlay" id="open-modal">
+        <div class="modal-box">
+            <h2>Ouvrir la collecte</h2>
+            <p class="modal-sub">Saisissez la phrase de passe pour déchiffrer ce fichier.</p>
+            <span class="modal-file-label" id="modal-file-label">—</span>
+            <div class="field-group">
+                <label for="pp-open">Phrase de passe</label>
+                <input type="password" id="pp-open" placeholder="Phrase de passe"
+                    autocomplete="current-password"
+                    onkeydown="if(event.key==='Enter') confirmOpen()">
+            </div>
+            <div id="open-error" style="display:none; margin-top:10px;
+                font-size:13px; color:#DC2626;"></div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeOpenModal()">Annuler</button>
+                <button class="btn btn-primary" onclick="confirmOpen()">Déchiffrer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Overlay : progression de la collecte ── -->
+    <div class="progress-overlay" id="progress-overlay">
+        <div class="progress-box">
+            <h2>Collecte en cours…</h2>
+            <div class="progress-step" id="progress-step">Initialisation…</div>
+            <div class="progress-bar-track">
+                <div class="progress-bar-fill" id="progress-fill"></div>
+            </div>
+            <div class="progress-counter" id="progress-counter">0 / 8</div>
+            <div class="progress-error" id="progress-error"></div>
+            <div style="margin-top:20px; display:none" id="progress-done-btn">
+                <button class="btn btn-secondary" onclick="closeProgress()">Fermer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <script src="js/crypto.js"></script>
+    <script>
+    let fileRegistry = [];
+    // ─────────────────────────────────────────────────────────────
+    // Tauri invoke — appel vers Rust
+    // ─────────────────────────────────────────────────────────────
+    function tauriInvoke(cmd, args) {
+        const fn = window.__TAURI__?.core?.invoke
+                ?? window.__TAURI__?.invoke;
+        if (!fn) return Promise.reject("Tauri indisponible");
+        return fn(cmd, args);
+    }
+    // ─────────────────────────────────────────────────────────────
+    // État
+    // ─────────────────────────────────────────────────────────────
+    let currentOpenPath = null;
+
+    // ─────────────────────────────────────────────────────────────
+    // Chargement de la liste des fichiers
+    // ─────────────────────────────────────────────────────────────
+    async function loadFiles() {
+        const list = document.getElementById("file-list");
+        let files = [];
+        try {
+            files = await tauriInvoke("cmd_list_data_files");
+        } catch(e) {
+            console.error("Impossible de lister les fichiers :", e);
+        }
+
+        // Pas de fichier : message explicite indiquant qu'une collecte est nécessaire.
+        if (files.length === 0) {
+            list.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon">📂</div>
+                    <p>Aucune collecte disponible.<br>
+                    Lancez une première collecte depuis cette machine
+                    ou copiez un fichier <code>.enc</code> dans le dossier <code>data/</code>.</p>
+                </div>`;
+            return;
+        }
+
+        // Liste des fichiers générés
+        fileRegistry = files;
+
+        list.innerHTML = files.map((f, i) => `
+            <div class="file-entry">
+                <div class="file-icon">🔒</div>
+                <div class="file-info">
+                    <div class="file-label">${escHtml(f.label)}</div>
+                    <div class="file-path">${escHtml(f.path)}</div>
+                </div>
+                <div class="file-actions">
+                    <button class="btn btn-primary" data-idx="${i}" onclick="openFile(this.dataset.idx)">
+                        Ouvrir
+                    </button>
+                    <button class="btn btn-danger" data-idx="${i}" onclick="deleteFile(this.dataset.idx)">
+                        Supprimer
+                    </button>
+                </div>
+            </div>
+        `).join("");
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Ouverture d'un fichier — modale phrase de passe
+    // ─────────────────────────────────────────────────────────────
+    function openFile(idx) {
+        const f = fileRegistry[idx];
+        currentOpenPath = f.path;
+        document.getElementById("modal-file-label").textContent = f.label;
+        document.getElementById("pp-open").value = "";
+        document.getElementById("open-error").style.display = "none";
+        document.getElementById("open-modal").classList.add("visible");
+        setTimeout(() => document.getElementById("pp-open").focus(), 80);
+    }
+
+    // Réinitialisation du champ modal à la fermeture de celui-ci
+    function closeOpenModal() {
+        document.getElementById("open-modal").classList.remove("visible");
+        document.getElementById("pp-open").value = "";
+        currentOpenPath = null;
+    }
+
+    // Vérification de la saisie de la phrase de passe
+    async function confirmOpen() {
+        const pp = document.getElementById("pp-open").value;
+        if (!pp) return showOpenError("Saisissez la phrase de passe.");
+
+        let bytes;
+        try {
+            bytes = await tauriInvoke("cmd_read_enc_file", { path: currentOpenPath });
+        } catch(e) {
+            return showOpenError("Impossible de lire le fichier : " + e);
+        }
+
+        // Vérifier la phrase de passe sans stocker les données déchiffrées
+        try {
+            await GraphADCrypto.initFromPassphrase(pp);
+            const blob = new Blob([new Uint8Array(bytes)]);
+            const url  = URL.createObjectURL(blob);
+            await GraphADCrypto.loadAndDecrypt(url);  // valide HMAC + phrase
+            URL.revokeObjectURL(url);
+        } catch(e) {
+            GraphADCrypto.clear();
+            return showOpenError("Phrase de passe incorrecte ou fichier altéré.");
+        }
+
+        // Stocker le chemin actif — dashboard-loader.js s'en servira
+        sessionStorage.setItem("_gad_active_file", currentOpenPath);
+        // _gad_s et _gad_p sont déjà dans sessionStorage via initFromPassphrase
+
+        closeOpenModal();
+        window.location.href = "index.html";
+    }
+
+    // Message en cas d'erreur d'ouverture du fichier
+    function showOpenError(msg) {
+        const el = document.getElementById("open-error");
+        el.textContent = msg;
+        el.style.display = "block";
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Suppression d'un fichier
+    // ─────────────────────────────────────────────────────────────
+    async function deleteFile(idx) {
+        const f = fileRegistry[idx];
+        if (!confirm(`Supprimer définitivement la collecte :\n« ${f.label} » ?\n\nCette action est irréversible.`)) return;
+        try {
+            await tauriInvoke("cmd_delete_data_file", { path: f.path });
+            showToast("Collecte supprimée.");
+            loadFiles();
+        } catch(e) {
+            showToast("Erreur : " + e);
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Nouvelle collecte
+    // ─────────────────────────────────────────────────────────────
+    async function startCollect() {
+        // Définition d'un mot de passe - initialisation
+        const pp1 = document.getElementById("pp-new").value;
+        const pp2 = document.getElementById("pp-confirm").value;
+        const hint = document.getElementById("collect-hint");
+
+        // On demande à l'utilisateur une phrase de passe
+        // Elle doit contenir au moins 12 caractères
+        // La confirmation de la phrase de passe doit être identique à celle initiale
+        // Sinon, la collecte ne se lance pas
+        if (!pp1) { hint.textContent = "Saisissez une phrase de passe."; return; }
+        if (pp1.length < 12) { hint.textContent = "12 caractères minimum."; return; }
+        if (pp1 !== pp2) { hint.textContent = "Les deux phrases ne correspondent pas."; return; }
+        hint.textContent = "";
+
+        // On vérifie également qu'Active Directory est actif
+        const hasAD = await tauriInvoke("cmd_check_active_directory").catch(() => false);
+        if (!hasAD) {
+            alert(
+                "Active Directory n'est pas détecté sur cette machine.\n\n" +
+                "La collecte doit être lancée depuis un contrôleur de domaine."
+            );
+            return;
+        }
+
+        showProgress();
+
+        // Lancer directement — les listeners sont déjà actifs depuis DOMContentLoaded
+        tauriInvoke("cmd_start_collect", { passphrase: pp1 }).catch(e => {
+            showProgressError(e);
+        });
+
+        document.getElementById("pp-new").value = "";
+        document.getElementById("pp-confirm").value = "";
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Barre de progression — événements Rust → JS
+    // ─────────────────────────────────────────────────────────────
+    function showProgress() {
+        document.getElementById("progress-step").textContent = "Initialisation…";
+        document.getElementById("progress-fill").style.width = "0%";
+        document.getElementById("progress-counter").textContent = "0 / 8";
+        document.getElementById("progress-error").classList.remove("visible");
+        document.getElementById("progress-done-btn").style.display = "none";
+        document.getElementById("progress-overlay").classList.add("visible");
+    }
+
+    // A la fin de la collecte, le bouton fermer permet de fermer la barre de progression
+    function closeProgress() {
+        document.getElementById("progress-overlay").classList.remove("visible");
+    }
+
+    // En cas d'erreur, afficher le message et l'utilisateur peut fermer la barre de progression
+    function showProgressError(msg) {
+        const el = document.getElementById("progress-error");
+        el.textContent = msg;
+        el.classList.add("visible");
+        document.getElementById("progress-done-btn").style.display = "block";
+    }
+
+    // Stocker les unlisten handles pour savoir quand les listeners sont prêts
+    let progressListenersReady = false;
+
+    // Écouter les événements de progression émis par collector.rs 
+    function setupProgressListener() {
+        const listenFn = window.__TAURI__?.event?.listen;
+        if (!listenFn) { setTimeout(setupProgressListener, 100); return; }
+
+        // On incrémente au fûr et à mesure des étapes
+        listenFn("collect-progress", event => {
+            const { step, total, message } = event.payload;
+            const pct = Math.round((step / total) * 100);
+            document.getElementById("progress-fill").style.width = pct + "%";
+            document.getElementById("progress-step").textContent = message;
+            document.getElementById("progress-counter").textContent = `${step} / ${total}`;
+        });
+
+        // Lorsqu'on arrive à la fin de la collecte, on l'affiche
+        listenFn("collect-done", () => {
+            document.getElementById("progress-step").textContent = "Collecte terminée avec succès.";
+            document.getElementById("progress-fill").style.width = "100%";
+            document.getElementById("progress-counter").textContent = "8 / 8";
+            document.getElementById("progress-done-btn").style.display = "block";
+            loadFiles();
+        });
+
+        // En cas d'erreur, on appelle la fonction showProgressError émise plus au-dessus
+        listenFn("collect-error", event => {
+            showProgressError(event.payload);
+        });
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Quitter
+    // ─────────────────────────────────────────────────────────────
+    function quitApp() {
+        tauriInvoke("cmd_quit");
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Utilitaires
+    // ─────────────────────────────────────────────────────────────
+    // Protection XSS - Eviter que les caractères spéciaux soient interprétés comme des balises HTML
+    function escHtml(s) {
+        return String(s)
+            .replace(/&/g,"&amp;")
+            .replace(/</g,"&lt;")
+            .replace(/>/g,"&gt;")
+            .replace(/"/g,"&quot;");
+    }
+
+    // Affichage temporaire d'un notification (utilisé dans le cadre d'une archive supprimée)
+    function showToast(msg) {
+        const t = document.getElementById("toast");
+        t.textContent = msg;
+        t.classList.add("show");
+        setTimeout(() => t.classList.remove("show"), 2800);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Adaptation du menu burger pour home.html
+    // — Verrouiller désactivé (pas de session active ici)
+    // — Bouton Quitter ajouté dans le menu
+    // ─────────────────────────────────────────────────────────────
+    document.addEventListener("DOMContentLoaded", () => {
+        loadFiles();
+        setupProgressListener();
+
+        // Désactiver le bouton Verrouiller — pas de session active sur l'accueil
+        const lockBtn = document.getElementById("burger-lock");
+        if (lockBtn) {
+            lockBtn.disabled = true;
+            lockBtn.style.opacity = "0.35";
+            lockBtn.style.cursor  = "not-allowed";
+            lockBtn.title = "Aucune session active";
+        }
+    });
+    </script>
+</body>
+</html>

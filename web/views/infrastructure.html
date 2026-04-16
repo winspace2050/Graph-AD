@@ -1,0 +1,432 @@
+<!-- Affichage de la vue Infrastructure -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Graph'AD - Infrastructure</title>
+
+    <link rel="stylesheet" href="../css/style.css">
+
+    <style>
+    .layout {
+        display: grid;
+        grid-template-columns: 280px 1fr;
+        gap: 20px;
+        padding: 20px;
+        height: calc(100vh - 40px);
+        box-sizing: border-box;
+    }
+    .layout-left {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        overflow-y: auto;
+    }
+    .layout-center {
+        overflow: auto;
+        position: relative;
+    }
+    #infra-search-zone {
+        position: fixed;
+        top: 60px;
+        z-index: 200;
+        max-width: 380px;
+        width: 380px;
+        background: #fff;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+        padding: 8px 10px;
+    }
+    #infra-tree {
+        padding-top: 64px;
+    }
+    </style>
+    <!-- Déchiffrement du JSON -->
+    <script src="../js/crypto.js"></script>
+    <script>
+        if (!GraphADCrypto.isAuthenticated()) {
+            window.location.replace("../home.html");
+        }
+    </script>
+    <!-- Appel des autres scripts -->
+    <script src="../js/shared-menu.js"></script>
+    <script src="../ux/IntroCard.js"></script>
+    <script src="../ux/PedagogyCard.js"></script>
+    <script src="../ux/Legend.js"></script>
+    <script src="../js/utils.js"></script>
+    <script src="../ux/SidePanel.js"></script>
+    <script src="../ux/InfrastructureTree.js"></script>
+    <script src="../js/minisearch.min.js"></script>
+</head>
+
+<body>
+<!-- Bouton de retour au tableau de bord -->
+<a href="../index.html" style="
+    display: inline-block;
+    padding: 8px 16px;
+    margin: 10px 20px;
+    background: #f0f4ff;
+    border: 1px solid #aac2ff;
+    border-radius: 6px;
+    color: #4A90D9;
+    text-decoration: none;
+    font-size: 14px;
+">← Retour au tableau de bord</a>
+
+<!-- Définition des layouts -->
+<div class="layout">
+    <!-- Colonne de gauche : Introduction à la vue, indications d'utilisation et légende -->
+    <div class="layout-left">
+        <section id="intro-card"></section>
+        <section id="pedagogy-card"></section>
+        <section id="legend"></section>
+    </div>
+
+    <!-- Colonne centrale : c'est le coeur même de la vue -->
+    <div class="layout-center">
+
+        <!-- Zone de recherche flottante -->
+        <div id="infra-search-zone">
+            <div style="display:flex; align-items:center; gap:0;">
+                <input type="text" id="infra-search-input"
+                    placeholder="Rechercher dans l'arborescence…"
+                    style="flex:1; padding:7px 10px; border:1px solid #ddd;
+                           border-right:none; border-radius:6px 0 0 6px;
+                           font-size:13px; outline:none; background:#fff;">
+                <button id="infra-search-clear"
+                    style="padding:7px 12px; background:#4A90D9; color:white; border:none;
+                           border-radius:0 6px 6px 0; font-size:15px; cursor:pointer;">✕</button>
+            </div>
+            <div id="infra-search-suggestions"
+                style="position:absolute; z-index:300; width:100%; background:#fff;
+                       border:1px solid #e0e4f0; border-radius:6px;
+                       box-shadow:0 4px 16px rgba(0,0,0,0.10); display:none;
+                       max-height:260px; overflow-y:auto; top:calc(100% + 4px); left:0;">
+            </div>
+        </div>
+
+        <div id="infra-tree"></div> <!-- Affichage de l'UX InfrastructureTree -->
+
+    </div>
+
+    <!-- Note : la colonne de gauche n'existe pas dans cette vue car on n'affiche pas les points d'attention et les actions recommandés. -->
+</div>
+
+<div id="side-panel"></div> <!-- Panneau latéral d'information -->
+
+<script>
+
+    // --- Introduction à la vue ---
+    IntroCard.render({
+        title: "Infrastructure",
+        subtitle: "Organisation technique de votre annuaire",
+        text: "Cette vue montre comment votre annuaire est organisé : les structures, les politiques de sécurité, les groupes et les collaborateurs. Cliquez sur un élément pour le déplier."
+    });
+
+    // --- Indications d'utilisation ---
+    PedagogyCard.render({
+        text: "Cliquez sur un bloc pour explorer son contenu. Utilisez « Remonter » pour revenir en arrière. Les détails apparaissent dans le panneau latéral."
+    });
+
+    // --- Chargement du JSON chiffré : On garanti un déchiffrement en temps réel ---
+    loadActiveFile()
+        .then(json => {
+
+            // --- Légende : ce sera la seule vue où la légende sera rendu directement dans le déchiffrement du JSON ---
+            Legend.render([
+                { color: "#8B5CF6", label: "Domaine racine" },
+                { color: "#4A90D9", label: "Structure active" },
+                { color: "#9CA3AF", label: "Structure vide" },
+                { color: "#F97316", label: "Politique de sécurité" },
+                { color: "#10B981", label: "Serveur de partage" },
+                { color: "#007a00", label: "Partage" },
+            ]);
+
+            // --- Rendu principal ---
+            const infraTree = buildInfrastructureTree(json);
+            const container = document.getElementById("infra-tree");
+            renderInfrastructureTree(container, infraTree);
+
+            // ================================================================
+            // BARRE DE RECHERCHE — Vue Infrastructure
+            // Index MiniSearch sur tous les nœuds de l'arbre.
+            // ================================================================
+
+            // --- Construction de l'index plat à partir de l'arbre ---
+            const infraIndex = [];   // { id, label, type, path, node }
+
+            function collectNodes(node, pathParts) {
+                if (!node || !node.label) return;
+                const currentPath = [...pathParts, node.label];
+                infraIndex.push({
+                    id:    node.id || node.label,
+                    label: node.label,
+                    type:  node.type  || "ou",
+                    path:  pathParts.join(" › "),   // chemin sans le nœud lui-même
+                    orphan: node.orphan || false,
+                    original: node
+                });
+                (node.children || []).forEach(child => collectNodes(child, currentPath));
+            }
+            collectNodes(infraTree, []);
+
+            // On initialise le moteur de recherche MiniSearch à partir des champs définis dans collectNodes
+            const infraMiniSearch = new MiniSearch({
+                fields: ["label", "path"],
+                storeFields: ["label", "type", "path", "orphan"],
+                idField: "id",
+                searchOptions: { prefix: true, fuzzy: 0.2, boost: { label: 2 } }
+            });
+
+            // MiniSearch requiert des ids uniques — dédoublonner si besoin
+            const seenIds = new Set();
+            const uniqueIndex = infraIndex.filter(n => {
+                if (seenIds.has(n.id)) return false;
+                seenIds.add(n.id);
+                return true;
+            });
+            infraMiniSearch.addAll(uniqueIndex);
+
+            // Map id → objet nœud complet (pour naviguer après clic)
+            const infraNodeMap = new Map(uniqueIndex.map(n => [n.id, n.original]));
+
+            // --- Badges et couleurs par type ---
+            const infraBadgeMap = {
+                "domain":           { label: "Domaine",            color: "#8B5CF6" },
+                "ou":               { label: "Structure",           color: "#4A90D9" },
+                "dc-container":     { label: "Contrôleurs",         color: "#4A90D9" },
+                "dc":               { label: "Contrôleur",          color: "#4A90D9" },
+                "gpo":              { label: "Politique de séc.",   color: "#F97316" },
+                "server":           { label: "Serveur de partage",  color: "#10B981" },
+                "shares-root":      { label: "Partages",            color: "#10B981" },
+                "share":            { label: "Partage",             color: "#065F46" }
+            };
+
+            // --- Dropdown de suggestions ---
+            const infraInput       = document.getElementById("infra-search-input");
+            const infraSuggestions = document.getElementById("infra-search-suggestions");
+            const infraClear       = document.getElementById("infra-search-clear");
+
+            // Replie tous les childrenWrapper de l'arbre
+            function collapseAllInfraNodes() {
+                document.querySelectorAll("#infra-tree .infra-children-wrapper").forEach(wrapper => {
+                    if (wrapper.style.display !== "none") {
+                        wrapper.style.display = "none";
+                        const arrow = wrapper.previousElementSibling?.querySelector("span:last-child");
+                        if (arrow && arrow.textContent === "▼") arrow.textContent = "▶";
+                    }
+                });
+            }
+
+            // Remet l'arbre dans son état initial (racine dépliée, reste replié)
+            function resetInfraTree() {
+                collapseAllInfraNodes();
+                // Déplier le premier niveau (enfants directs du domaine racine)
+                const rootNode = document.querySelector("#infra-tree > div > div");
+                if (rootNode) {
+                    const firstWrapper = rootNode.querySelector("div[style*='flex-direction:column']");
+                    if (firstWrapper) {
+                        firstWrapper.style.display = "flex";
+                        const arrow = rootNode.querySelector("[data-node-id] span:last-child");
+                        if (arrow && arrow.textContent === "▶") arrow.textContent = "▼";
+                    }
+                }
+            }
+
+            // --- Parcourt dynamique de l'arborescence hiérarchique ---
+            infraInput.addEventListener("input", () => {
+                const q = infraInput.value.trim();
+
+                // Requête de moins de 2 caractères : Réinitialiser l'arbre (tout replier sauf racine)
+                if (q.length < 2) {
+                    infraSuggestions.style.display = "none";
+                    infraSuggestions.innerHTML = "";
+                    // Réinitialiser l'arbre (tout replier sauf racine)
+                    resetInfraTree();
+                    return;
+                }
+
+                const matches = infraMiniSearch.search(q).slice(0, 10); // C'est ici qu'on exécute la recherche
+
+                // --- Dépliage dynamique ---
+                // 1. Replier tout l'arbre
+                collapseAllInfraNodes();
+                // 2. Déplier les chemins vers les nœuds correspondants
+                matches.forEach(m => highlightInfraNodeById(m.id));
+
+                // --- Dropdown de suggestions ---
+                // S'il n'y a pas de résultats, le dire explicitement
+                if (matches.length === 0) {
+                    infraSuggestions.innerHTML =
+                        '<div style="padding:10px 14px; color:#999; font-size:13px;">Aucun résultat</div>';
+                    infraSuggestions.style.display = "block";
+                    return;
+                }
+
+                // Sinon, le dropdown s'active et afficher les résultats
+                infraSuggestions.innerHTML = "";
+                // Chaque élément de recherche est différencié
+                matches.forEach(m => {
+                    const nodeObj = infraNodeMap.get(m.id);
+                    const badge   = infraBadgeMap[m.type] || { label: "Élément", color: "#6b7280" };
+                    const isOrphan = m.orphan;
+
+                    // Apparence des éléments
+                    const item = document.createElement("div");
+                    item.style.cssText =
+                        "padding:8px 14px; cursor:pointer; border-bottom:1px solid #f0f0f0;" +
+                        "display:flex; flex-direction:column; gap:2px;";
+
+                    // Nom et badge affiché en haut de l'objet de recherche
+                    const topRow = document.createElement("div");
+                    topRow.style.cssText = "display:flex; align-items:center; gap:8px;";
+
+                    // Nom de l'objet
+                    const nameSpan = document.createElement("span");
+                    nameSpan.style.cssText = "font-size:13px; color:#1f2937; font-weight:500;";
+                    nameSpan.textContent = m.label;
+
+                    // Badge d'identification
+                    // Affiche une alerte ci-besoin
+                    const badgeEl = document.createElement("span");
+                    badgeEl.style.cssText =
+                        `font-size:10px; font-weight:700; padding:1px 7px; border-radius:10px;` +
+                        `background:${badge.color}22; color:${badge.color}; white-space:nowrap;` +
+                        (isOrphan ? " border:1px solid #EF4444;" : "");
+                    badgeEl.textContent = isOrphan ? badge.label + " ⚠" : badge.label;
+
+                    topRow.appendChild(nameSpan);
+                    topRow.appendChild(badgeEl);
+                    
+                    // On affiche le chemin de l'objet seulement quand il est disponible
+                    if (m.path) {
+                        const pathSpan = document.createElement("span");
+                        pathSpan.style.cssText = "font-size:11px; color:#9ca3af;";
+                        pathSpan.textContent = m.path;
+                        item.appendChild(topRow);
+                        item.appendChild(pathSpan);
+                    } else {
+                        item.appendChild(topRow);
+                    }
+
+                    // Listeners de souris survolant
+                    item.addEventListener("mouseenter", () => item.style.background = "#f5f7fa");
+                    item.addEventListener("mouseleave", () => item.style.background = "#fff");
+                    // Au clic, replie tout sauf CE nœud
+                    item.addEventListener("click", () => {
+                        infraSuggestions.style.display = "none";
+                        infraInput.value = m.label;
+                        // Le seul nœud déplié est celui correspondant à la recherche
+                        collapseAllInfraNodes();
+                        const found = highlightInfraNodeById(m.id);
+                        if (found) {
+                            const nodeEl = document.querySelector(`[data-node-id="${m.id}"]`);
+                            if (nodeEl) nodeEl.click();
+                        } else if (nodeObj) {
+                            openInfrastructurePanel(nodeObj);
+                        }
+                    });
+
+                    infraSuggestions.appendChild(item);
+                });
+
+                infraSuggestions.style.display = "block";
+            });
+
+            // Bouton effacer
+            infraClear.addEventListener("click", () => {
+                infraInput.value = "";
+                infraSuggestions.style.display = "none";
+                infraSuggestions.innerHTML = "";
+            });
+
+            // Fermer le dropdown si clic hors zone
+            document.addEventListener("click", e => {
+                const zone = document.getElementById("infra-search-zone");
+                if (zone && !zone.contains(e.target)) {
+                    infraSuggestions.style.display = "none";
+                }
+            });
+
+            // Ouvrir le panneau latéral si on vient d'une recherche
+            const searchTarget = sessionStorage.getItem("graphad-search-target");
+            if (searchTarget) {
+                sessionStorage.removeItem("graphad-search-target");
+                const target = JSON.parse(searchTarget);
+
+                // Chercher d'abord dans l'arborescence rendue
+                setTimeout(() => {
+                    // Cas 0 : ouDN passé directement depuis tech-access ou teams
+                    // C'est le cas le plus fiable — on cherche l'OU par son DN exact
+                    if (target.ouDN) {
+                        const ouNode = (json.structure?.nodes || []).find(n =>
+                            n.meta?.dn && n.meta.dn.toLowerCase() === target.ouDN.toLowerCase()
+                        );
+                        if (ouNode) {
+                            const foundOU = highlightInfraNodeById(ouNode.id);
+                            if (foundOU) {
+                                const nodeEl = document.querySelector(`[data-node-id="${ouNode.id}"]`);
+                                if (nodeEl) nodeEl.click();
+                            }
+                            return;
+                        }
+                    }
+                    // Cas 1 : nœud directement dans l'arbre (OU, share, server, GPO)
+                    const found = highlightInfraNodeById(target.id);
+
+                    if (found) {
+                        // Ouvrir aussi le panneau latéral du nœud trouvé
+                        const nodeEl = document.querySelector(`[data-node-id="${target.id}"]`);
+                        if (nodeEl) nodeEl.click();
+                    } else {
+                        // Cas 2 : utilisateur ou groupe — trouver son OU parente via le DN
+                        const allObjects = [
+                            ...(json.business?.identities || []),
+                            ...(json.business?.groups     || []),
+                            ...(json.technical?.groups    || [])
+                        ];
+                        const obj = allObjects.find(o => o.id === target.id || o.label === target.label);
+
+                        if (obj?.meta?.dn) {
+                            // DN existant -> on récupère le DN qu'on le découpe et on recherche le noeud
+                            const ouDN = obj.meta.dn.split(",").slice(1).join(",");
+                            const ouNode = (json.structure?.nodes || []).find(n =>
+                                n.meta?.dn && n.meta.dn.toLowerCase() === ouDN.toLowerCase()
+                            );
+                            // Noeud existant : mise en évidence visuelle
+                            if (ouNode) {
+                                const foundOU = highlightInfraNodeById(ouNode.id);
+                                if (foundOU) {
+                                    const nodeEl = document.querySelector(`[data-node-id="${ouNode.id}"]`);
+                                    if (nodeEl) nodeEl.click();
+                                }
+                            }
+                        } else {
+                            // Cas 3 : fallback SidePanel
+                            const allItems = [
+                                ...(json.business?.identities || []),
+                                ...(json.business?.groups || []),
+                                ...(json.technical?.groups || []),
+                                ...(json.structure?.nodes || []),
+                                ...(json.gpo?.nodes || [])
+                            ];
+                            const item = allItems.find(i => i.id === target.id || i.label === target.label);
+                            if (item) SidePanel.open(item);
+                        }
+                    }
+                }, 300); // Timeout de 300 milisecondes pour la recherche
+            }
+        })
+        // Capture des erreurs en cas d'échec de déchiffrement
+        // La session active est nettoyé et on revient à la page d'accueil
+        .catch(err => {
+            console.error("[Graph'AD] Erreur de chargement :", err);
+            sessionStorage.removeItem("_gad_active_file");
+            GraphADCrypto.clear();
+            window.location.replace("../home.html");
+        });
+</script>
+
+</body>
+</html>

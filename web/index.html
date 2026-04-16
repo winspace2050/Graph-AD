@@ -1,0 +1,130 @@
+<!-- Accueil Graph'AD - Onboarding, recherche et tableau de bord -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Graph’AD – Accueil</title>
+
+    <!-- Styles globaux -->
+    <link rel="stylesheet" href="css/style.css">
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            background: #f5f7fa;
+        }
+        
+        h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        p {
+            font-size: 18px;
+            margin-bottom: 30px;
+            color: #444;
+        }
+
+        .score-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 20px;
+        }
+        .score-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+            transition: 0.2s;
+        }
+        .score-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+        }
+
+        .score-card h3 {
+            margin: 0 0 10px 0;
+            font-size: 20px;
+        }
+
+        .score-card p {
+            margin: 0;
+            color: #666;
+        }
+        
+        #doc-modal strong {
+            color: #4A90D9;
+        }
+
+        #doc-modal h3 {
+             font-size:18px;
+             font-weight:700;
+             color:#4A90D9;
+             margin-bottom:6px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Graph’AD</h1>
+    <p>Choisissez une vue pour explorer votre annuaire Active Directory.</p>
+    <!-- Déchiffrement du JSON -->
+    <script src="js/crypto.js"></script>
+    <script>
+        if (!GraphADCrypto.isAuthenticated()) {
+            window.location.replace("home.html");
+        }
+    </script>
+    <!-- Appel des autres scripts -->
+    <script src="js/shared-menu.js"></script>
+    <script src="ux/OnboardingBanner.js"></script>
+
+    <!-- Bannière de bienvenue -->
+    <div id="onboarding"></div>
+    <script>
+        OnboardingBanner.render("onboarding");
+    </script>
+    
+
+    <div id="global-score"></div>
+
+    <!-- Zone de recherche utilisateur -->
+    <div id="search-zone" style="max-width:600px; margin:0 auto 20px; position:relative;">
+
+        <!-- Champ + bouton flèche -->
+        <div style="display:flex; align-items:center; gap:0;">
+            <input type="text" id="search-input"
+                placeholder="Rechercher dans Graph'AD (collaborateur, groupe, structure, partage…)"
+                style="flex:1; padding:10px 14px; border:1px solid #ddd;
+                    border-right:none; border-radius:6px 0 0 6px; font-size:14px; outline:none;">
+            <button id="search-btn"
+                style="padding:10px 16px; background:#4A90D9; color:white; border:none;
+                    border-radius:0 6px 6px 0; font-size:16px; cursor:pointer;">→</button>
+        </div>
+
+        <!-- Message d'erreur champ vide -->
+        <div id="search-empty-msg"
+            style="display:none; margin-top:6px; font-size:13px; color:#e53935;">
+            Merci de saisir un collaborateur dans le champ de recherche.
+        </div>
+
+        <!-- Suggestions de saisie (dropdown) -->
+        <div id="search-suggestions"></div>
+    </div>
+
+    <!-- Résultat : fiche de chemin utilisateur -->
+    <div id="search-result-card" style="display:none; max-width:600px; margin:0 auto 30px;"></div>
+
+    <!-- Grille du dashboard -->
+    <div id="score-grid"></div>
+
+    <!-- Scripts nécessaires -->
+    <script src="js/utils.js"></script>
+    <script src="js/minisearch.min.js"></script>
+    <script src="js/dashboard-loader.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,734 @@
+/*------------------------------------------------------*/
+/* Feuille de style css                                 */
+/* Sert de modèle pour l'ensemble des vues disponibles  */
+/*------------------------------------------------------*/
+
+/* ----------------------------- */
+/* THEME VARIABLES */
+/* ----------------------------- */
+:root {
+  --bg: #ffffff;
+  --text: #222222;
+  --panel: #f5f5f5;
+  --accent: #2196F3;
+  --toolbar-bg: #e0e0e0;
+  --link: #666666;
+}
+
+:root.dark {
+  --bg: #1e1e1e;
+  --text: #e0e0e0;
+  --panel: #2a2a2a;
+  --accent: #90CAF9;
+  --toolbar-bg: #333333;
+  --link: #aaaaaa;
+}
+
+/* ----------------------------- */
+/* GLOBAL */
+/* ----------------------------- */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: system-ui, sans-serif;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+/* Les vues utilisent un layout en colonnes fixes —
+   le scroll est géré par colonne, pas par le body */
+body:has(.layout) {
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* -------------------------------------------------------------
+   Dashboard - Affichage des vues (page d'accueil index.html)
+   ------------------------------------------------------------- */
+
+/* Affichage sous forme de grille */
+#score-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 24px;
+    margin-top: 40px;
+}
+
+/* Style de carte */
+.score-card {
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    border: 1px solid #e5e7eb;
+}
+
+/* Carte cliquable */
+.score-card.clickable {
+    cursor: pointer;
+}
+
+.score-card.clickable:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+}
+
+/* Titre de la carte */
+.score-card h3 {
+    margin: 0 0 12px 0;
+    font-size: 20px;
+    color: #1f2937;
+}
+
+/* Score */
+.score-value {
+    font-size: 36px;
+    font-weight: bold;
+    color: #2563eb;
+    margin-bottom: 8px;
+}
+
+/* Sous-texte */
+.score-card p {
+    margin: 0;
+    color: #6b7280;
+    font-size: 16px;
+}
+
+/* Identités */
+.identity-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 20px 0;
+}
+
+.identity-item {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    background: #f7f7f7;
+    border-radius: 6px;
+    border: 1px solid #ddd;
+}
+
+/* -------------------------------------------------------------
+   SIDEPANEL - Informations sur barre latérale dépliable
+   ------------------------------------------------------------- */
+
+.sidepanel-type {
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 15px;
+}
+
+.sidepanel-close {
+    margin-top: 20px;
+    width: 100%;
+    padding: 10px;
+    background: #4a78ff;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+/* -----------------------------------
+   CARTE DE LA COLONNE DE GAUCHE
+   ---------------------------------*/
+
+/* Carte d'introduction */
+.intro-card {
+    background: #ffffff;
+    padding: 25px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    border-left: 6px solid #4a78ff;
+}
+
+.intro-card h1 {
+    margin: 0;
+    font-size: 28px;
+}
+
+.intro-card h2 {
+    margin: 5px 0 15px;
+    font-size: 18px;
+    color: #666;
+}
+
+/* Carte pédagogique */
+.pedagogy-card {
+    background: #f0f4ff;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    border-left: 6px solid #6a8cff;
+}
+
+/* Légende */
+.legend {
+    background: #ffffff;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    border-left: 6px solid #999;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.legend-color {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    margin-right: 10px;
+}
+
+/* -----------------------------------
+   CARTE DE LA COLONNE DE DROITE
+   ---------------------------------*/
+
+/* Carte de diagnostic */
+.diagnostic-card {
+    background: #fff0f0;
+    padding: 20px;
+    border-radius: 8px;
+    margin-top: 20px;
+    border-left: 6px solid #ff4d4d;
+}
+
+.diagnostic-card .score {
+    font-size: 32px;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+/* Carte des actions */
+.action-list {
+    background: #f6fff0;
+    padding: 20px;
+    border-radius: 8px;
+    margin-top: 20px;
+    border-left: 6px solid #7ac943;
+}
+
+/* Diagnostic + actions - styles communs */
+.action-list ul,
+.diagnostic-card ul {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.action-list li,
+.diagnostic-card li {
+    margin-bottom: 6px;
+}
+
+
+/* -----------------------------------
+   EQUIPES & COLLABORATEURS
+   ---------------------------------*/
+
+/* Identités et groupes métiers - styles communs */
+.business-group-item,
+.business-member-item {
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+}
+
+.business-group-item:hover,
+.business-member-item:hover {
+    background: #f7f7f7;
+}
+
+/* Nom du groupe */
+.group-title {
+    font-weight: bold;
+    margin-bottom: 4px;
+}
+
+/* Meta des groupes / identités */
+.group-meta,
+.member-meta {
+    font-size: 0.85em;
+    color: #666;
+}
+
+/* Si rien n'est trouvé */
+.empty {
+    padding: 10px;
+    color: #999;
+    font-style: italic;
+}
+
+
+/* Liste de cartes (même style que la vue Métier) */
+.card-list {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 15px;
+    overflow-y: auto;
+}
+
+
+/* -----------------------------------
+   ACCESS TECHNIQUE
+   ---------------------------------*/
+
+/* Groupes techniques */
+.technical-group-item {
+    padding: 12px 14px;
+    border: 1px solid #e0e4f0;
+    border-radius: 6px;
+    margin-bottom: 10px;
+    background: #f8faff;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.technical-group-item:hover {
+    background: #eef3ff;
+    border-color: #aac2ff;
+}
+
+/* Titre du groupe et meta */
+.group-title {
+    font-weight: bold;
+    font-size: 15px;
+    margin-bottom: 4px;
+}
+
+.group-meta {
+    font-size: 13px;
+    color: #666;
+}
+
+/* Comptes techniques */
+.technical-account-item {
+    padding: 12px 14px;
+    border: 1px solid #e0e4f0;
+    border-radius: 6px;
+    margin-bottom: 10px;
+    background: #fff;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.technical-account-item:hover {
+    background: #f5f8ff;
+    border-color: #aac2ff;
+}
+
+#technical-account-list h3 {
+    margin-top: 0;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #ddd;
+}
+
+/* -----------------------------------
+   EQUIPES & COLLABORATEURS
+   + ACCESS TECHNIQUE
+   NOM DU MEMBRE ET META
+   ---------------------------------*/
+.member-name {
+    font-weight: bold;
+    font-size: 15px;
+}
+
+.member-meta {
+    font-size: 13px;
+    color: #666;
+}
+
+
+/* --------------------------------------
+   STATUS DE L'OBJET - selon la couleur
+   ------------------------------------*/
+.status-active {
+    border-left: 6px solid #4a90e2; /* bleu */
+}
+
+.status-inactive {
+    border-left: 6px solid #999; /* gris */
+}
+
+.status-disabled {
+    border-left: 6px solid #d9534f; /* rouge */
+}
+
+.status-invited {
+    border-left: 6px solid #f0ad4e; /* jaune */
+}
+
+.status-unknown {
+    border-left: 6px solid #ccc; /* blanc pâle */
+}
+
+/* -------------------------------------------------------------
+   LAYOUT GLOBAL — Vue en 3 colonnes pour tout le monde
+   ------------------------------------------------------------- */
+
+/* Style global */
+.layout {
+    display: grid;
+    grid-template-columns: 280px 1fr 300px;
+    gap: 20px;
+    padding: 20px;
+    height: calc(100vh - 40px);
+    box-sizing: border-box;
+}
+
+/* Zones gauche + droite */
+.layout-left,
+.layout-right {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    overflow-y: auto;
+}
+
+/* Zone centrale */
+.layout-center {
+    overflow-y: auto;
+    padding-right: 5px; /* petit confort pour éviter que le scroll colle au bord */
+}
+
+/* -------------------------------------------------------------
+   RISK DOT — Point de couleur qui défini les risques
+   ------------------------------------------------------------- */
+
+.risk-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 8px;
+    flex-shrink: 0;
+}
+.risk-dot.critical { background: #EF4444; } /* Rouge = critique */
+.risk-dot.warning { background: #F59E0B; }  /* Orange = attention */
+.risk-dot.ok { background: #10B981; }       /* Vert = ok */
+
+/* -------------------------------------------------------------
+   "VOIR PLUS" - Pour éviter d'afficher tout d'un coup
+   ------------------------------------------------------------- */
+
+.show-more-btn {
+    display: block;
+    width: 100%;
+    padding: 12px;
+    margin-top: 10px;
+    background: #f0f4ff;
+    border: 1px solid #aac2ff;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    color: #4A90D9;
+}
+.show-more-btn:hover {
+    background: #e0e8ff;
+}
+
+/* ----------------------------------------------------------------------
+   ONBOARDING - quand l'utilisateur ouvre Graph'AD pour la première fois
+   ---------------------------------------------------------------------- */
+
+.onboarding-banner {
+    background: linear-gradient(135deg, #4A90D9, #8B5CF6);
+    color: white;
+    padding: 24px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+}
+
+.onboarding-steps {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin: 16px 0;
+}
+
+.onboarding-step {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255,255,255,0.2);
+    padding: 12px 16px;
+    border-radius: 8px;
+    color: white;
+    text-decoration: none;
+    flex: 1;
+}
+
+.onboarding-step:hover {
+    background: rgba(255,255,255,0.3);
+}
+
+.step-number {
+    background: white;
+    color: #4A90D9;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    flex-shrink: 0;
+}
+
+.onboarding-dismiss {
+    background: rgba(255,255,255,0.2);
+    border: 1px solid rgba(255,255,255,0.4);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+/* -------------------------------------------------------------
+   BADGE - utilisé dans les vues teams et tech-access
+   ------------------------------------------------------------- */
+
+.badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    margin-left: 8px;
+}
+
+.badge-critical { background: #FEE2E2; color: #DC2626; }    /* Rouge = Critique */
+.badge-warning { background: #FEF3C7; color: #D97706; }     /* Orange = Attention */
+.badge-ok { background: #D1FAE5; color: #059669; }          /* Vert = ok */
+.badge-check { background: #EDE9FE; color: #7C3AED; }       /* Violet = à vérifier */
+
+/* -------------------------------------------------------------
+   PANNEAU LATERAL - affiche les informations sur un objet
+   ------------------------------------------------------------- */
+
+/* Bouton d'actions */
+.sidepanel-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid #e0e4f0;
+}
+
+/* Style global */
+#side-panel {
+    position: fixed;
+    top: 0;
+    right: -400px;
+    width: 380px;
+    height: 100vh;
+    background: #fff;
+    box-shadow: -2px 0 10px rgba(0,0,0,0.15);
+    padding: 20px;
+    overflow-y: auto;
+    transition: right 0.3s ease;
+    z-index: 1000;
+}
+
+#side-panel.visible {
+    right: 0;
+}
+
+/* -------------------------------------------------------------
+   VUE RESPONSIVE - multi-plateforme
+   ------------------------------------------------------------- */
+
+/* Tablette */
+@media (max-width: 1024px) {
+    .layout {
+        grid-template-columns: 1fr 1fr !important;
+    }
+    .layout-left {
+        grid-column: 1 / -1;
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+    .layout {
+        grid-template-columns: 1fr !important;
+    }
+    .layout-left,
+    .layout-right {
+        order: unset;
+    }
+    /* Onboarding : chaque étape prend toute la largeur en mobile */
+    .onboarding-step {
+        flex: 1 1 100%;
+    }
+}
+
+/* -------------------------------------------------------------
+   ARBRE HIERARCHIQUE - utilisé dans la vue Infrastructure
+   ------------------------------------------------------------- */
+
+.tree-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.15s;
+}
+
+.tree-item:hover {
+    background: #f0f4ff;
+}
+
+.tree-arrow {
+    width: 16px;
+    text-align: center;
+    font-size: 11px;
+    color: #999;
+}
+
+.tree-icon {
+    font-size: 16px;
+}
+
+.tree-label {
+    flex: 1;
+}
+
+.tree-leaf {
+    color: #555;
+}
+
+.tree-leaf:hover {
+    color: #4A90D9;
+}
+
+/* -------------------------------------------------------------------------------------
+   ARBORESCENCE DES RESSOURCES - utilisé dans la vue Ressources
+   Ce n'est pas un "arbre" a proprement dit mais une hiérarchie serveur - partages
+   ------------------------------------------------------------------------------------- */
+
+/* Ressources */
+.resources-tree {
+    font-family: system-ui, sans-serif;
+    font-size: 14px;
+}
+
+.resource-server-block {
+    margin-bottom: 16px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.resource-server-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    background: #f0f9f4;
+    border-bottom: 1px solid #e5e7eb;
+    cursor: pointer;
+    font-weight: 600;
+    color: #065f46;
+    border-left: 4px solid #10B981;
+}
+
+.resource-server-header:hover {
+    background: #d1fae5;
+}
+
+/* Serveur */
+.server-name {
+    font-size: 15px;
+}
+
+.server-count {
+    font-size: 12px;
+    color: #6b7280;
+}
+
+/* Liste des ressources partagés */
+.resource-shares-list {
+    padding: 8px 0;
+}
+
+.resource-share-item {
+    display: flex;
+    align-items: center;
+    padding: 8px 14px 8px 28px;
+    cursor: pointer;
+    border-bottom: 1px solid #f3f4f6;
+    transition: background 0.15s;
+}
+
+.resource-share-item:hover {
+    background: #f0fdf4;
+}
+
+.resource-share-item:last-child {
+    border-bottom: none;
+}
+
+.share-name {
+    font-weight: 500;
+    color: #1f2937;
+}
+
+/* Connecteur horizontal pour les nœuds enfants */
+[data-node-id] > div[style*="padding-left: 20px"] > [data-node-id]::before {
+    content: "";
+    position: absolute;
+    left: -20px;
+    top: 14px;
+    width: 18px;
+    height: 2px;
+    background: #e5e7eb;
+}
+
+
+/* --------------------------------------
+   INFRASTRUCTURE — arbre généalogique
+   ------------------------------------*/
+#infra-tree {
+    min-width: max-content;   /* permet le scroll horizontal */
+    padding: 16px;
+}
+
+/* Ligne horizontale entre les enfants */
+#infra-tree .child-row {
+    position: relative;
+}
+#infra-tree .child-row::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: calc(50% - (100% - 48px) / 2);  /* ajusté au gap */
+    width: calc(100% - 48px);
+    height: 2px;
+    background: #e5e7eb;
+}
+
+#infra-tree [data-node-id]:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    transform: translateY(-1px);
+    transition: transform 0.15s, box-shadow 0.15s;
+}

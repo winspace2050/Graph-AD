@@ -1,0 +1,395 @@
+<!-- Affichage de la vue Ressources -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Graph'AD - Ressources</title>
+
+<link rel="stylesheet" href="../css/style.css">
+
+<style>
+.layout {
+    display: grid;
+    grid-template-columns: 280px 1fr 300px;
+    gap: 20px;
+    padding: 20px;
+    height: calc(100vh - 40px);
+    box-sizing: border-box;
+}
+.layout-left, .layout-right {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    overflow-y: auto;
+}
+.layout-center { overflow-y: auto; }
+</style>
+<!-- Déchiffrement du JSON -->
+<script src="../js/crypto.js"></script>
+<script>
+    if (!GraphADCrypto.isAuthenticated()) {
+        window.location.replace("../home.html");
+    }
+</script>
+<!-- Appel des autres scripts -->
+<script src="../js/shared-menu.js"></script>
+<script src="../ux/IntroCard.js"></script>
+<script src="../ux/PedagogyCard.js"></script>
+<script src="../ux/Legend.js"></script>
+<script src="../ux/DiagnosticCard.js"></script>
+<script src="../ux/ActionList.js"></script>
+<script src="../js/utils.js"></script>
+<script src="../ux/SidePanel.js"></script>
+
+<script src="../ux/ResourceView.js"></script>
+
+</head>
+<body>
+<!-- Bouton de retour au tableau de bord -->
+<a href="../index.html" style="
+    display: inline-block;
+    padding: 8px 16px;
+    margin: 10px 20px;
+    background: #f0f4ff;
+    border: 1px solid #aac2ff;
+    border-radius: 6px;
+    color: #4A90D9;
+    text-decoration: none;
+    font-size: 14px;
+">← Retour au tableau de bord</a>
+
+<!-- Définition des layouts -->
+<div class="layout">
+
+    <!-- Colonne de gauche : Introduction à la vue, indications d'utilisation et légende -->
+    <div class="layout-left">
+        <section id="intro-card"></section>
+        <section id="pedagogy-card"></section>
+        <section id="legend"></section>
+    </div>
+
+    <!-- Colonne centrale : c'est le coeur même de la vue -->
+    <div class="layout-center">
+        <div style="padding:8px 10px; border-bottom:1px solid #eee; background:#f9fafb; margin-bottom:8px; border-radius:6px;">
+            <div style="display:flex; align-items:center; gap:0;">
+                <input type="text" id="resources-filter-input"
+                    placeholder="Filtrer par partage ou serveur…"
+                    style="flex:1; padding:7px 10px; border:1px solid #ddd;
+                        border-right:none; border-radius:6px 0 0 6px;
+                        font-size:13px; outline:none;">
+                <button id="resources-filter-btn"
+                    style="padding:7px 12px; background:#4A90D9; color:white; border:none;
+                        border-radius:0 6px 6px 0; font-size:15px; cursor:pointer;">→</button>
+            </div>
+            <div id="resources-filter-count"
+                 style="font-size:11px; color:#9ca3af; margin-top:4px; display:none;"></div>
+        </div>
+        <div id="resource-list"></div>
+    </div>
+
+    <!-- Colonne de droite : points d'attention et actions recommandés -->
+    <div class="layout-right">
+        <section id="diagnostic-card"></section>
+        <section id="action-list"></section>
+    </div>
+
+</div>
+
+<div id="side-panel"></div> <!-- Panneau latéral d'information -->
+
+<script>
+let jsonData = null;
+
+// --- Introduction à la vue ---
+IntroCard.render({
+    title: "Ressources",
+    subtitle: "Dossiers, applications, serveurs",
+    text: "Cette vue présente les ressources de l'entreprise et les groupes qui y ont accès."
+});
+
+// --- Indications d'utilisation ---
+PedagogyCard.render({
+    text: "Une ressource doit être accessible uniquement par les groupes légitimes. Vérifiez les accès inattendus."
+});
+
+// --- Légende ---
+Legend.render([
+    { color: "#10B981", label: "Accès normal" },
+    { color: "#F59E0B", label: "Accès à surveiller" },
+    { color: "#EF4444", label: "Aucun accès (orpheline)" }
+]);
+
+// --- Chargement du JSON chiffré : On garanti un déchiffrement en temps réel ---
+loadActiveFile()
+    .then(json => {
+        jsonData = json;
+
+        // --------------------------------------------------------------
+        // 1) Normalisation des données
+        // C'est une double vérification par rapport à ResourceView.js
+        // --------------------------------------------------------------
+        const servers = Array.isArray(json.infrastructure?.servers)
+            ? json.infrastructure.servers
+            : [];
+
+        const normalizedServers = servers.map(s => ({
+            ...s,
+            shares: Array.isArray(s.shares) ? s.shares : []
+        }));
+
+        const allShares = normalizedServers.flatMap(s => s.shares);
+
+        // -----------------------------
+        // 2) Rendu principal
+        // -----------------------------
+        ResourceView.render("resource-list", json);
+
+        // -------------------------------------------------------
+        // FILTRE TEMPS RÉEL — Vue Ressources
+        // Cherche dans les noms de partages et de serveurs.
+        // Déplie automatiquement les serveurs avec correspondances,
+        // replie les autres.
+        // -------------------------------------------------------
+        const resFilterInput = document.getElementById("resources-filter-input");
+        const resFilterClear = document.getElementById("resources-filter-btn");
+
+        // Fonction du filtre en temps réel
+        function applyResourcesFilter() {
+            const q = (resFilterInput.value || "").trim().toLowerCase();
+            const serverBlocks = document.querySelectorAll(".resource-server-block");
+
+            serverBlocks.forEach(block => {
+                // Initialisation - préparation des donneés et éléments DOM
+                // Le but - le résultat donne un filtre en temps réel des éléments
+                const serverName  = (block.querySelector(".server-name")?.textContent || "").toLowerCase();
+                const shareItems  = block.querySelectorAll(".resource-share-item");
+                const sharesList  = block.querySelector(".resource-shares-list");
+                const arrow       = block.querySelector(".resource-server-header span");
+
+                if (!q) {
+                    // Champ de recherche vide -> tout replier, tout afficher
+                    shareItems.forEach(si => si.style.display = "");
+                    if (sharesList) sharesList.style.display = "none";
+                    if (arrow) arrow.textContent = "▶";
+                    block.style.display = "";
+                    return;
+                }
+
+                // Vérifier chaque partage
+                let hasMatch = serverName.includes(q);
+                shareItems.forEach(si => {
+                    const shareName = (si.querySelector(".share-name")?.textContent || "").toLowerCase();
+                    const matches   = shareName.includes(q) || serverName.includes(q);
+                    si.style.display = matches ? "" : "none";
+                    if (matches) hasMatch = true;
+                });
+
+                // Masquer le bloc serveur si aucun résultat
+                block.style.display = hasMatch ? "" : "none";
+
+                // Déplier si correspondance
+                if (hasMatch && sharesList) {
+                    sharesList.style.display = "block";
+                    if (arrow) arrow.textContent = "▼";
+                }
+            });
+            // Compteur -> Permet d'indiquer le nombre de partages correspondant à la recherche
+            const resFilterCount = document.getElementById("resources-filter-count");
+            if (resFilterCount) {
+                if (!q) {
+                    resFilterCount.style.display = "none";
+                } else {
+                    const visibleShares = document.querySelectorAll(".resource-share-item:not([style*='display: none'])").length;
+                    resFilterCount.textContent = `${visibleShares} partage(s) trouvé(s)`;
+                    resFilterCount.style.display = "block";
+                }
+            }
+        }
+
+        // Rendus finaux
+        resFilterInput.addEventListener("input", applyResourcesFilter);
+        document.getElementById("resources-filter-btn")
+            ?.addEventListener("click", applyResourcesFilter);
+        resFilterClear.addEventListener("click", () => {
+            resFilterInput.value = "";
+            applyResourcesFilter();
+        });
+
+        // ------------------------------------
+        // 3) Diagnostic & actions recommandés
+        // ------------------------------------
+        const issues = [];
+        const actions = [];
+
+        if (allShares.length === 0) {
+            // Aucun partage → info neutre
+            DiagnosticCard.render({
+                score: 100,
+                label: "Santé - Ressources",
+                issues: [{
+                    level: "info",
+                    text: "Aucun partage détecté dans l’infrastructure."
+                }]
+            });
+            ActionList.render([]);
+            return;
+        }
+
+        // Anomalie 1 : Partages sans permissions
+        const noAccess = allShares.filter(sh =>
+            !Array.isArray(sh.permissions) || sh.permissions.length === 0
+        );
+
+        if (noAccess.length > 0) {
+            issues.push({
+                level: "danger",
+                text: `${noAccess.length} partage(s) sans aucune permission définie`
+            });
+            actions.push({
+                priority: "high",
+                text: "Attribuer des groupes légitimes aux partages sans permissions"
+            });
+        }
+
+        // Anomalie 2 : Partages avec beaucoup de groupes
+        const tooMany = allShares.filter(sh =>
+            Array.isArray(sh.permissions) && sh.permissions.length > 10
+        );
+
+        if (tooMany.length > 0) {
+            issues.push({
+                level: "warning",
+                text: `${tooMany.length} partage(s) avec de nombreux groupes`
+            });
+            actions.push({
+                priority: "medium",
+                text: "Vérifier les partages avec trop d'accès"
+            });
+        }
+
+        // Anomalie 3 : Risques permissions
+        // "Tout le monde" : warning dont le texte commence par "Accès ouvert à tous"
+        // "Contrôle total" qui ne vient pas d'un admin : warning dont le texte commence par "Contrôle total"
+        const everyoneShares = allShares.filter(sh =>
+            ResourceView.getShareRisks(sh).some(r =>
+                r.level === "warning" && r.text.startsWith("Accès ouvert à tous")
+            )
+        );
+        const fullControlShares = allShares.filter(sh =>
+            ResourceView.getShareRisks(sh).some(r =>
+                r.level === "warning" && r.text.startsWith("Contrôle total")
+            )
+        );
+
+        // Partage ouvert à tout le monde : Point d'attention et action recommandés ajoutés aux cartes respectives
+        if (everyoneShares.length > 0) {
+            issues.push({
+                level: "danger",
+                text: `${everyoneShares.length} partage(s) accessible(s) à tous les utilisateurs`
+            });
+            actions.push({
+                priority: "high",
+                text: "Restreindre les partages accessibles à \"Tout le monde\""
+            });
+        }
+
+        // On fait de même pour les partages "Contrôle total" non-admins
+        if (fullControlShares.length > 0) {
+            issues.push({
+                level: "warning",
+                text: `${fullControlShares.length} partage(s) avec contrôle total accordé à des non-administrateurs`
+            });
+            actions.push({
+                priority: "medium",
+                text: "Vérifier les permissions de contrôle total sur les partages"
+            });
+        }
+
+        // On rend les cartes
+        DiagnosticCard.render({
+            issues
+        });
+        ActionList.render(actions);
+
+        // -----------------------------------------------
+        // 4) Ouverture depuis la recherche du dashboard
+        // -----------------------------------------------
+        const searchTarget = sessionStorage.getItem("graphad-search-target");
+        if (searchTarget) {
+            sessionStorage.removeItem("graphad-search-target");
+            const target = JSON.parse(searchTarget);
+
+            setTimeout(() => {
+                // Construire la liste complète des partages avec référence au serveur
+                const allShareItems = normalizedServers.flatMap(s =>
+                    s.shares.map(sh => ({
+                        id:          sh.id,
+                        label:       sh.label,
+                        type:        "share",
+                        path:        sh.path,
+                        permissions: sh.permissions || [],
+                        server:      s.label,
+                        serverId:    s.id
+                    }))
+                );
+                const item = allShareItems.find(i => i.id === target.id || i.label === target.label);
+
+                if (item) {
+                    // Étape 1 : déplier le bloc serveur parent
+                    document.querySelectorAll(".resource-server-block").forEach(block => {
+                        const nameEl = block.querySelector(".server-name");
+                        if (nameEl && nameEl.textContent.trim().toLowerCase() === (item.server || "").trim().toLowerCase()) {
+                            const sharesList = block.querySelector(".resource-shares-list");
+                            const arrow      = block.querySelector(".resource-server-header span");
+                            if (sharesList && sharesList.style.display === "none") {
+                                sharesList.style.display = "block";
+                                if (arrow) arrow.textContent = "▼";
+                            }
+                        }
+                    });
+
+                    // Étape 2 : mettre le partage en surbrillance (maintenant visible)
+                    setTimeout(() => {
+                        highlightNodeById(target.id);
+                        // Étape 3 : ouvrir le panneau latéral
+                        SidePanel.open(item);
+                    }, 200);
+
+                    return;
+                }
+                
+                // Cas : la cible est un serveur — déplier et surligner le bloc serveur
+                if (!item) {
+                    document.querySelectorAll(".resource-server-block").forEach(block => {
+                        const nameEl = block.querySelector(".server-name");
+                        if (nameEl && nameEl.textContent.trim().toLowerCase() === (target.label || "").trim().toLowerCase()) {
+                            // Déplier
+                            const sharesList = block.querySelector(".resource-shares-list");
+                            const arrow      = block.querySelector(".resource-server-header span");
+                            if (sharesList && sharesList.style.display === "none") {
+                                sharesList.style.display = "block";
+                                if (arrow) arrow.textContent = "▼";
+                            }
+                            // Surligner le bloc serveur (maintenant que data-node-id est présent)
+                            setTimeout(() => {
+                                if (target.id) highlightNodeById(target.id);
+                                else block.scrollIntoView({ behavior: "smooth", block: "start" });
+                            }, 80);
+                        }
+                    });
+                }
+            }, 300); // Timeout de 300 milisecondes pour la recherche
+        }
+    })
+    // Capture des erreurs en cas d'échec de déchiffrement
+    // La session active est nettoyé et on revient à la page d'accueil
+    .catch(err => {
+        console.error("[Graph'AD] Erreur de chargement :", err);
+        sessionStorage.removeItem("_gad_active_file");
+        GraphADCrypto.clear();
+        window.location.replace("../home.html");
+    });
+</script>
+
+</body>
+</html>

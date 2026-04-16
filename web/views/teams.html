@@ -1,0 +1,670 @@
+<!-- Affichage de la vue Equipes & Collaborateurs -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Graph'AD - Équipes & Collaborateurs</title>
+
+    <link rel="stylesheet" href="../css/style.css">
+
+    <style>
+        .layout {
+            display: grid;
+            grid-template-columns: 280px 1fr 1fr 300px;
+            gap: 20px;
+            padding: 20px;
+            height: calc(100vh - 40px);
+            box-sizing: border-box;
+        }
+
+        .layout-left,
+        .layout-right {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow-y: auto;
+        }
+
+        .panel-list {
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            background: #fff;
+            padding: 10px;
+        }
+    </style>
+	<!-- Déchiffrement du JSON -->
+    <script src="../js/crypto.js"></script>
+    <script>
+        if (!GraphADCrypto.isAuthenticated()) {
+            window.location.replace("../home.html");
+        }
+    </script>
+	<!-- Appel des autres scripts -->
+    <script src="../js/shared-menu.js"></script>
+    <script src="../ux/IntroCard.js"></script>
+    <script src="../ux/PedagogyCard.js"></script>
+    <script src="../ux/Legend.js"></script>
+    <script src="../ux/DiagnosticCard.js"></script>
+    <script src="../ux/ActionList.js"></script>
+
+    <script src="../js/utils.js"></script>
+    <script src="../ux/SidePanel.js"></script>
+
+    <script src="../ux/TeamsView.js"></script>
+</head>
+
+<body>
+<!-- Bouton de retour au tableau de bord -->
+<a href="../index.html" style="
+    display: inline-block;
+    padding: 8px 16px;
+    margin: 10px 20px;
+    background: #f0f4ff;
+    border: 1px solid #aac2ff;
+    border-radius: 6px;
+    color: #4A90D9;
+    text-decoration: none;
+    font-size: 14px;
+">← Retour au tableau de bord</a>
+
+<!-- Définition des layouts -->
+<div class="layout">
+
+    <!-- Colonne de gauche : Introduction à la vue, indications d'utilisation et légende -->
+    <div class="layout-left">
+        <section id="intro-card"></section>
+        <section id="pedagogy-card"></section>
+        <section id="legend"></section>
+    </div>
+
+    <!-- Colonne centrale : vue scindée en deux tableaux -->
+    <!-- Tableau de gauche : filtre + liste des groupes -->
+    <div style="display:flex; flex-direction:column; overflow:hidden;
+            border:1px solid #ddd; border-radius:6px; background:#fff;">
+
+        <!-- Barre de filtre (unique) -->
+        <div style="padding:8px 10px; border-bottom:1px solid #eee; background:#f9fafb; flex-shrink:0;">
+            <div style="display:flex; align-items:center; gap:0;">
+                <input type="text" id="teams-filter-input"
+                    placeholder="Filtrer par groupe ou collaborateur..."
+                    style="flex:1; padding:7px 10px; border:1px solid #ddd;
+                        border-right:none; border-radius:6px 0 0 6px;
+                        font-size:13px; outline:none;">
+                <button id="teams-filter-btn"
+                    style="padding:7px 12px; background:#4A90D9; color:white; border:none;
+                        border-radius:0 6px 6px 0; font-size:15px; cursor:pointer;">→</button>
+            </div>
+            <div id="teams-filter-count"
+                 style="font-size:11px; color:#9ca3af; margin-top:4px; display:none;">
+            </div>
+        </div>
+        
+        <!-- Résultats de filtre — visible uniquement quand filtre actif -->
+        <div id="teams-filter-results"
+            style="display:none; max-height:180px; overflow-y:auto;
+                    border-bottom:1px solid #eee; background:#fff; font-size:13px;">
+        </div>
+
+        <!-- Liste des groupes — filtrée en temps réel -->
+        <div class="panel-list" id="team-groups"
+             style="border:none; border-radius:0; flex:1; overflow-y:auto;"> </div>
+    </div>
+
+    <!-- Tableau de droite : Liste des membres -->
+    <div class="panel-list" id="team-members">
+        <p style="color:#999;">Cliquez sur un groupe pour voir ses membres.</p>
+    </div>
+
+    <!-- Colonne de droite : points d'attention et actions recommandés -->
+    <div class="layout-right">
+        <section id="diagnostic-card"></section>
+        <section id="action-list"></section>
+    </div>
+
+</div>
+
+<div id="side-panel"></div> <!-- Panneau latéral d'information -->
+<!-- Note : ici, le panneau latéral sert de fallback. Sinon, toutes les informations s'affichent directement dans le tableau de droite. -->
+
+<script>
+    // --- Introduction à la vue ---
+    IntroCard.render({
+        title: "Équipes & Collaborateurs",
+        subtitle: "Organisation des équipes et des collaborateurs",
+        text: "Cette vue présente les équipes de l'entreprise et les collaborateurs qui en font partie. "
+            + "Cliquez sur un groupe pour voir ses membres, puis sur un collaborateur pour afficher ses détails."
+    });
+
+    // --- Indications d'utilisation ---
+    PedagogyCard.render({
+        text: "Un groupe métier représente une équipe ou un rôle. Les membres doivent correspondre aux collaborateurs réellement rattachés à cette équipe."
+    });
+
+    // --- Légende ---
+    Legend.render([
+        { color: "#10B981", label: "Actif" },
+        { color: "#F59E0B", label: "Inactif" },
+        { color: "#EF4444", label: "Désactivé" },
+        { color: "#8B5CF6", label: "Groupe imbriqué" }
+    ]);
+
+    // --- Chargement du JSON chiffré : On garanti un déchiffrement en temps réel ---
+    loadActiveFile()
+        .then(json => {
+            // Précalcul des partages — évite de recalculer à chaque ouverture de fiche
+            const allShares = (json.infrastructure?.servers || []).flatMap(srv =>
+                (srv.shares || []).map(sh => ({ ...sh, server: srv.label || srv.name || "" }))
+            );
+             // Filtrage des groupes (on garde les groupes métiers et on exclut les groupes invités)
+            const groups = (json.business.groups || []).filter(g => {
+                const label = (g.label || "").toLowerCase();
+                return label !== "invités" && label !== "guests";
+            });
+            // Filtrage des identités (on exclut les comptes ordinateurs, les comptes de service et les invités)
+            const identities = (json.business.identities || []).filter(i => {
+                if (i.meta?.isMachine || i.meta?.isServiceAccount) return false;
+                const label = normStr(i.label || "");
+                return label !== "invite" && label !== "guest";
+            });
+            // Tous les identifiants des membres des groupes sont récupérés
+            const allMemberIds = new Set(
+                groups.flatMap(g => g.meta?.members || [])
+            );
+            // Recherche des identités orphelines
+            const orphans = identities.filter(i => {
+                if (allMemberIds.has(i.id)) return false;
+                if (i.meta?.isServiceAccount) return false;
+                const label = normStr(i.label || "");
+                return label !== "invite" && label !== "guest";
+            });
+
+            TeamsView.render("team-groups", groups, identities, orphans);
+
+            // =====================================================================
+            // FILTRE TEMPS RÉEL — Équipes & Collaborateurs
+            //
+            // Mode groupe  : tape un nom de groupe → seuls les groupes correspondants restent
+            // Mode membre  : tape un nom de collaborateur → seuls ses groupes parents restent
+            //                (groupes imbriqués inclus)
+            // Champ vide   → tous les groupes et orphelins réapparaissent
+            // =====================================================================
+            const filterInput = document.getElementById("teams-filter-input");
+            const filterCount = document.getElementById("teams-filter-count");
+            document.getElementById("teams-filter-btn")
+                .addEventListener("click", applyTeamsFilter);
+
+            // Fonction du filtre en temps réel
+            function applyTeamsFilter() {
+                const q = normStr(filterInput.value.trim());
+                const resultsBox = document.getElementById("teams-filter-results");
+
+                // On attend 2 caractères pour afficher les résultats
+                if (!q || q.length < 2) {
+                    resultsBox.style.display = "none";
+                    resultsBox.innerHTML = "";
+                    TeamsView.render("team-groups", groups, identities, orphans);
+                    filterCount.style.display = "none";
+                    return;
+                }
+
+                // Groupes dont le nom correspond
+                const matchedGroups = groups.filter(g => normStr(g.label).includes(q));
+
+                // La recherche par utilisateur garde les groupes auxquel il correspond
+                const matchedMemberGroupIds = new Set();
+                identities.forEach(user => {
+                    const fullName = normStr(TeamsView.extractFullName(user));
+                    const label    = normStr(user.label);
+                    if (!fullName.includes(q) && !label.includes(q)) return;
+
+                    groups.forEach(g => {
+                        // Les correspondances utilisateurs sont conservés dans la recherche
+                        const members = g.meta?.members || [];
+                        if (members.includes(user.id)) {
+                            matchedMemberGroupIds.add(g.id);
+                        }
+                        // Groupes imbriqués : remonter au groupe parent si le sous-groupe contient le membre
+                        members.forEach(memberId => {
+                            if (memberId.startsWith("bg-") || memberId.startsWith("tg-")) {
+                                const subGroup = groups.find(sg => sg.id === memberId);
+                                if (subGroup && (subGroup.meta?.members || []).includes(user.id)) {
+                                    matchedMemberGroupIds.add(g.id);
+                                }
+                            }
+                        });
+                    });
+                });
+
+                // Rendu des correspondances directes et indirectes
+                const combinedIds = new Set([
+                    ...matchedGroups.map(g => g.id),
+                    ...matchedMemberGroupIds
+                ]);
+                const filteredGroups = groups.filter(g => combinedIds.has(g.id));
+
+                // Orphelins filtrés
+                const filteredOrphans = orphans.filter(u => {
+                    const fullName = normStr(TeamsView.extractFullName(u));
+                    return fullName.includes(q) || normStr(u.label).includes(q);
+                });
+
+                TeamsView.render("team-groups", filteredGroups, identities, filteredOrphans);
+
+                // Mise à jour de l'interface utilisateur :
+                // - Affichage des groupes filtrés
+                // - Nombre de résultats trouvés
+                // - Aucun résultat : on informe
+                const total = filteredGroups.length + filteredOrphans.length;
+                filterCount.textContent = total > 0
+                    ? `${total} résultat(s) — vider le champ pour tout réafficher`
+                    : "Aucun résultat";
+                filterCount.style.display = "block";
+
+                resultsBox.innerHTML = "";
+                
+                // Collecter les personnes dont le nom correspond directement
+                const matchedPeople = [];
+                identities.forEach(user => {
+                    const fullName = normStr(TeamsView.extractFullName(user));
+                    if (fullName.includes(q) || normStr(user.label).includes(q))
+                        matchedPeople.push(user);
+                });
+                filteredOrphans.forEach(u => {
+                    if (!matchedPeople.find(p => p.id === u.id)) matchedPeople.push(u);
+                });
+
+                resultsBox.innerHTML = "";
+
+                // Rien ne correspond dans la recherche -> aucun résultat
+                if (matchedPeople.length === 0 && matchedGroups.length === 0) {
+                    resultsBox.innerHTML = `<div style="padding:8px 12px; color:#9ca3af;">Aucun résultat</div>`;
+                } else {
+                    // Sinon, on affiche les identités d'abord
+                    matchedPeople.slice(0, 10).forEach(user => {
+                        const name = TeamsView.extractFullName(user) || user.label;
+                        const item = document.createElement("div");
+                        // Rendu de la fiche
+                        item.style.cssText = "padding:7px 12px; cursor:pointer; border-bottom:1px solid #f5f5f5; display:flex; align-items:center; gap:8px;";
+                        item.innerHTML = `
+                            <span style="background:#DCFCE7; color:#15803D; font-size:10px;
+                                font-weight:600; padding:1px 5px; border-radius:8px; white-space:nowrap;">
+                                Collaborateur
+                            </span>
+                            <span style="font-size:13px; color:#1f2937;">${escapeHtml(name)}</span>
+                            <span style="font-size:11px; color:#9ca3af;">${escapeHtml(user.label)}</span>
+                        `;
+                        // Evénement de survol de souris
+                        item.addEventListener("mouseenter", () => item.style.background = "#f5f7fa");
+                        item.addEventListener("mouseleave", () => item.style.background = "#fff");
+                        item.addEventListener("click", () => {
+                            // Trouver le groupe parent et l'ouvrir
+                            const parentGroup = groups.find(g => (g.meta?.members || []).includes(user.id));
+                            if (parentGroup) {
+                                TeamsView.renderMembers("team-members", parentGroup);
+                                document.querySelectorAll("[data-node-id]").forEach(el =>
+                                    el.style.background = el.dataset.nodeId === parentGroup.id ? "#EFF6FF" : "");
+                            }
+                            // Afficher la fiche directement
+                            if (typeof showUserCardInline === "function") showUserCardInline(user);
+                            resultsBox.style.display = "none";
+                            filterInput.value = "";
+                            filterCount.style.display = "none";
+                        });
+                        resultsBox.appendChild(item);
+                    });
+
+                    // Séparateur groupes si nécessaire
+                    if (matchedGroups.length > 0 && matchedPeople.length > 0) {
+                        const sep = document.createElement("div");
+                        sep.style.cssText = "padding:3px 12px; font-size:10px; text-transform:uppercase; color:#9ca3af; font-weight:600; background:#f9fafb;";
+                        sep.textContent = "Groupes";
+                        resultsBox.appendChild(sep);
+                    }
+
+                    // Groupes correspondant directement au nom saisi
+                    matchedGroups.slice(0, 5).forEach(g => {
+                        const item = document.createElement("div");
+                        item.style.cssText = "padding:7px 12px; cursor:pointer; border-bottom:1px solid #f5f5f5;";
+                        item.innerHTML = `
+                            <span style="background:#E0E7FF; color:#3730A3; font-size:10px;
+                                font-weight:600; padding:1px 5px; border-radius:8px; margin-right:6px;">
+                                Groupe
+                            </span>
+                            ${escapeHtml(g.label)}
+                        `;
+                        // Evénement de survol de souris
+                        item.addEventListener("mouseenter", () => item.style.background = "#f5f7fa");
+                        item.addEventListener("mouseleave", () => item.style.background = "#fff");
+                        // Au clic, afficher les membres du groupe
+                        item.addEventListener("click", () => {
+                            TeamsView.renderMembers("team-members", g);
+                            document.querySelectorAll("[data-node-id]").forEach(el =>
+                                el.style.background = el.dataset.nodeId === g.id ? "#EFF6FF" : "");
+                            resultsBox.style.display = "none";
+                            filterInput.value = "";
+                            filterCount.style.display = "none";
+                        });
+                        resultsBox.appendChild(item);
+                    });
+                }
+                resultsBox.style.display = "block";
+            }
+
+            filterInput.addEventListener("input", applyTeamsFilter);
+
+            // =======================================================================
+            // FICHE UTILISATEUR INLINE dans #team-members
+            // Elle permet d'afficher les détails d'unz identité sur le tableau de
+            // droite directement
+            // La fiche est fermable par ailleurs pour revenir à la vue liste
+            // Si cette fonction plante, le panneau latéral vient en fallback
+            // =======================================================================
+            window.showUserCardInline = function(user) {
+                const container = document.getElementById("team-members");
+                if (!container || !user) return;
+
+                // Identité du compte et place dans la structure
+                const dn       = user.meta?.dn || "";
+                const fullName = (dn.match(/^CN=([^,]+)/) || [])[1] || user.label;
+                const location = dn.split(",")
+                    .filter(p => p.startsWith("OU="))
+                    .map(p => p.replace("OU=", ""))
+                    .reverse()
+                    .join(" › ") || "Non renseigné";
+
+                const userGroups = user.meta?.groups || [];
+
+                // Accès aux ressources (même logique que dashboard)
+                const userAccess = allShares.filter(sh =>
+                    (sh.permissions || []).some(p =>
+                        userGroups.some(g => g.toLowerCase() === (p.group || "").toLowerCase())
+                    )
+                );
+
+                // Statut
+                const statusColors = { active: "#10B981", inactive: "#F59E0B", disabled: "#EF4444" };
+                const statusLabels = { active: "Actif", inactive: "Inactif", disabled: "Désactivé" };
+                const statusColor  = statusColors[user.meta?.status] || "#9CA3AF";
+                const statusLabel  = statusLabels[user.meta?.status] || user.meta?.status || "Inconnu";
+
+                // Points d'attention
+                const alerts = [];
+                if (user.meta?.passwordNeverExpires) alerts.push("⚠ Mot de passe permanent");
+                if (!user.meta?.enabled)             alerts.push("⚠ Compte désactivé");
+                if (!user.meta?.lastLogon)           alerts.push("⚠ Jamais connecté");
+
+                container.style.overflowY = "auto";
+                container.innerHTML = "";
+
+                // En-tête — construit entièrement en DOM pour éviter les problèmes de querySelector
+                const header = document.createElement("div");
+                header.style.cssText = "display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;";
+
+                // Colonne gauche : nom + identifiant
+                const headerLeft = document.createElement("div");
+                headerLeft.innerHTML = `
+                    <div style="font-size:18px; font-weight:700; color:#1f2937;">${escapeHtml(fullName)}</div>
+                    <div style="font-size:12px; color:#6b7280; margin-top:2px;">${escapeHtml(user.label)}</div>
+                `;
+
+                // Colonne droite : badge statut + bouton Fermer
+                const headerRight = document.createElement("div");
+                headerRight.style.cssText = "display:flex; align-items:center; gap:8px;";
+
+                // Badge de statut
+                const statusBadge = document.createElement("span");
+                statusBadge.style.cssText = `background:${statusColor}22; color:${statusColor}; font-size:11px;
+                    font-weight:600; padding:3px 8px; border-radius:20px; border:1px solid ${statusColor}44;`;
+                statusBadge.textContent = statusLabel;
+
+                // Bouton fermer
+                const closeBtn = document.createElement("button");
+                closeBtn.textContent = "✕ Fermer";
+                closeBtn.style.cssText = `font-size:11px; padding:3px 10px; border-radius:6px; cursor:pointer;
+                    background:#f0f4ff; border:1px solid #aac2ff; color:#4A90D9; font-weight:600;`;
+                closeBtn.addEventListener("click", () => {
+                    const groupToRestore = window.currentTeamGroup;
+                    setTimeout(() => {
+                        // Si on vient d'un groupe, on réaffichage la liste correspondante à ce dernier
+                        if (groupToRestore) {
+                            TeamsView.renderMembers("team-members", groupToRestore);
+                        } else {
+                            document.getElementById("team-members").innerHTML =
+                                "<p style='color:#999;'>Cliquez sur un groupe pour voir ses membres.</p>";
+                        }
+                    }, 0);
+                });
+
+                headerRight.appendChild(statusBadge);
+                headerRight.appendChild(closeBtn);
+                header.appendChild(headerLeft);
+                header.appendChild(headerRight);
+                container.appendChild(header);
+
+                // Position dans la structure
+                const locSection = document.createElement("div");
+                locSection.style.marginBottom = "12px";
+                locSection.innerHTML = `
+                    <div style="font-size:10px; text-transform:uppercase; color:#9ca3af; font-weight:600; margin-bottom:4px;">Position dans la structure</div>
+                    <div style="font-size:12px; color:#374151; background:#f9fafb; padding:7px 10px; border-radius:6px; border-left:3px solid #4A90D9;">
+                        ${escapeHtml(location)}
+                    </div>
+                `;
+                container.appendChild(locSection);
+
+                // Groupes
+                const groupSection = document.createElement("div");
+                groupSection.style.marginBottom = "12px";
+                const groupBadges = userGroups.length > 0
+                    ? `<div style="display:flex; flex-wrap:wrap; gap:5px;">
+                        ${userGroups.map(g => `<span style="background:#EFF6FF; color:#1D4ED8; font-size:11px;
+                            padding:2px 8px; border-radius:20px; border:1px solid #BFDBFE;">${escapeHtml(g)}</span>`).join("")}
+                       </div>`
+                    : `<div style="font-size:12px; color:#9ca3af;">Aucun groupe</div>`;
+                groupSection.innerHTML = `
+                    <div style="font-size:10px; text-transform:uppercase; color:#9ca3af; font-weight:600; margin-bottom:4px;">
+                        Appartenance aux groupes (${userGroups.length})
+                    </div>
+                    ${groupBadges}
+                `;
+                container.appendChild(groupSection);
+
+                // Accès aux ressources
+                const accessPriority = { "0":3,"full":3,"fullcontrol":3,"1":2,"change":2,"modify":2,"2":1,"read":1 };
+                const accessSection = document.createElement("div");
+                accessSection.style.marginBottom = alerts.length > 0 ? "12px" : "0";
+                const accessRows = userAccess.length > 0
+                    ? userAccess.map(sh => {
+                        // Filtre des permissions liées aux groupes de l'utilisateur
+                        const matchingPerms = (sh.permissions || []).filter(p =>
+                            userGroups.some(g => g.toLowerCase() === (p.group || "").toLowerCase())
+                        );
+                        // La permission la plus forte est gardée
+                        const bestPerm = matchingPerms.reduce((best, p) => {
+                            const score = accessPriority[String(p.access).toLowerCase()] || 0;
+                            return score > (accessPriority[String(best?.access).toLowerCase()] || 0) ? p : best;
+                        }, null);
+                        const accessLabel = bestPerm ? translateAccess(bestPerm.access) : "";
+                        return `<div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
+                            <span style="font-size:12px; color:#374151; font-weight:600;">${escapeHtml(sh.label)}</span>
+                            <span style="font-size:10px; color:#6b7280;">— ${escapeHtml(sh.server)}</span>
+                            ${accessLabel ? `<span style="font-size:10px; background:#F3F4F6; color:#374151;
+                                padding:1px 6px; border-radius:10px;">${escapeHtml(accessLabel)}</span>` : ""}
+                        </div>`;
+                    }).join("")
+                    : `<div style="font-size:12px; color:#9ca3af;">Aucun accès aux ressources détecté</div>`;
+                // Insertion du contenu dans la section
+                accessSection.innerHTML = `
+                    <div style="font-size:10px; text-transform:uppercase; color:#9ca3af; font-weight:600; margin-bottom:4px;">
+                        Accès aux ressources (${userAccess.length})
+                    </div>
+                    ${accessRows}
+                `;
+                container.appendChild(accessSection);
+
+                // Activité (connexion + mot de passe)
+                const datesSection = document.createElement("div");
+                datesSection.style.marginBottom = "12px";
+                datesSection.innerHTML = `
+                    <div style="font-size:10px; text-transform:uppercase; color:#9ca3af; font-weight:600; margin-bottom:4px;">Activité</div>
+                    <div style="font-size:12px; color:#374151; background:#f9fafb; padding:7px 10px; border-radius:6px;">
+                        <div>Dernière connexion : <strong>${user.meta?.lastLogon ? formatDateTime(user.meta.lastLogon) : "Jamais connecté"}</strong></div>
+                        <div style="margin-top:3px;">Mot de passe modifié le : <strong>${user.meta?.passwordLastSet ? formatDateTime(user.meta.passwordLastSet) : "Jamais modifié"}</strong></div>
+                    </div>
+                `;
+                container.appendChild(datesSection);
+
+                // Points d'attention
+                if (alerts.length > 0) {
+                    const alertSection = document.createElement("div");
+                    alertSection.innerHTML = `
+                        <div style="font-size:10px; text-transform:uppercase; color:#9ca3af; font-weight:600; margin-bottom:4px;">
+                            Points d'attention
+                        </div>
+                        ${alerts.map(a => `<div style="font-size:12px; color:#B45309; background:#FFFBEB;
+                            padding:5px 10px; border-radius:6px; margin-bottom:3px;
+                            border-left:3px solid #F59E0B;">${escapeHtml(a)}</div>`).join("")}
+                    `;
+                    container.appendChild(alertSection);
+                }
+                // Bouton Infrastructure — si l'utilisateur a un DN (donc une position dans la structure)
+                if (dn) {
+                    // Extraire l'ID de l'OU parente depuis le DN
+                    // Le DN ressemble à : CN=Chloé Morel,OU=Support,OU=Users,OU=Paris,OU=Contoso,DC=lan,DC=local
+                    // On cherche dans l'arbre infra le nœud OU dont le DN correspond au parent direct
+                    const ouDN = dn.split(",").slice(1).join(","); // tout après le premier CN=
+
+                    const infraBtn = document.createElement("button");
+                    infraBtn.textContent = "Voir la position dans la vue Infrastructure →";
+                    infraBtn.style.cssText = `
+                        margin-top:12px; width:100%; padding:8px 12px;
+                        background:#f0f4ff; border:1px solid #aac2ff; border-radius:6px;
+                        color:#4A90D9; font-size:13px; font-weight:600; cursor:pointer; text-align:left;
+                    `;
+                    infraBtn.addEventListener("click", () => {
+                        // Trouver le nœud OU dans json.structure.nodes dont le DN correspond
+                        const ouNode = (json.structure?.nodes || []).find(n =>
+                            n.meta?.dn && n.meta.dn.toLowerCase() === ouDN.toLowerCase()
+                        );
+                        sessionStorage.setItem("graphad-search-target", JSON.stringify({
+                            id:    ouNode?.id || null,
+                            label: ouNode?.label || "",
+                            view:  "infrastructure"
+                        }));
+                        window.location.href = "../views/infrastructure.html";
+                    });
+                    container.appendChild(infraBtn);
+                }
+            };
+
+            // Diagnostic et actions recommandés
+            const issues = [];
+            const actions = [];
+
+            // Anomalie 1 : Groupe vide
+            const emptyGroups = groups.filter(g =>
+                !g.meta?.members || g.meta.members.length === 0
+            );
+            if (emptyGroups.length > 0) {
+                issues.push({ level: "warning", text: `${emptyGroups.length} groupe(s) vide(s)` });
+                actions.push({ priority: "medium", text: "Vérifier les groupes vides" });
+            }
+
+            // Anomalie 2 : compte inactif
+            const inactive = identities.filter(i => !i.meta?.lastLogon);
+            if (inactive.length > 0) {
+                issues.push({ level: "warning", text: `${inactive.length} collaborateur(s) jamais connecté(s)` });
+                actions.push({ priority: "low", text: "Vérifier les comptes sans connexion" });
+            }
+
+            // Anomalie 3 : compte désactivé
+            const disabled = identities.filter(i => i.meta?.enabled === false);
+            if (disabled.length > 0) {
+                issues.push({ level: "danger", text: `${disabled.length} compte(s) désactivé(s)` });
+                actions.push({ priority: "medium", text: "Archiver les comptes désactivés" });
+            }
+
+            // Anomalie 4 : compte orphelin
+            if (orphans.length > 0) {
+                issues.push({ level: "warning", text: `${orphans.length} collaborateur(s) sans groupe` });
+                actions.push({ priority: "medium", text: "Affecter les collaborateurs sans groupe à une équipe" });
+            }
+
+            // On rend les cartes
+            DiagnosticCard.render({ issues });
+            ActionList.render(actions);
+
+            // Navigation depuis la barre de recherche dashboard
+            const searchTarget = sessionStorage.getItem("graphad-search-target");
+            if (searchTarget) {
+                sessionStorage.removeItem("graphad-search-target");
+                const target = JSON.parse(searchTarget);
+
+                // La cible est destiné à cette vue : plusieurs cas de figure
+                if (target?.view === "teams") {
+                    setTimeout(() => {
+                        // --- Cas groupe métier ---
+                        // On affiche la liste des membres de ce groupe
+                        if (target.type === "group") {
+                            const groupData = (json.business?.groups || []).find(g =>
+                                g.id === target.id || g.label === target.label
+                            );
+                            if (groupData) {
+                                // Déplier "Afficher les X restants" si nécessaire
+                                if (!document.querySelector(`[data-node-id="${groupData.id}"]`)) {
+                                    const btn = document.querySelector("#team-groups .show-more-btn");
+                                    if (btn) btn.click();
+                                }
+                                setTimeout(() => {
+                                    highlightNodeById(groupData.id);
+                                    TeamsView.renderMembers("team-members", groupData);
+                                }, 80);
+                            }
+                            return;
+                        }
+                        // Note : highlightNodeById() est une fonction utilitaire qui permet la mise en surbrillance du résultat
+
+                        // --- Cas utilisateur ---
+                        // On affiche les détails de l'utilisateur sur le tableau de droite
+                        if (target.type === "user") {
+                            const userItem = (json.business?.identities || []).find(i =>
+                                i.id === target.id || i.label === target.label
+                            );
+                            if (!userItem) return;
+
+                            // Ouvrir le groupe parent s'il existe
+                            const parentGroup = target.parentGroupId
+                                ? (json.business?.groups || []).find(g => g.id === target.parentGroupId)
+                                : (json.business?.groups || []).find(g =>
+                                    (g.meta?.members || []).includes(userItem.id)
+                                  );
+
+                            if (parentGroup) {
+                                TeamsView.renderMembers("team-members", parentGroup);
+                                setTimeout(() => {
+                                    if (typeof window.showUserCardInline === "function")
+                                        window.showUserCardInline(userItem);
+                                }, 150);
+                            } else {
+                                // Orphelin
+                                if (typeof window.showUserCardInline === "function")
+                                    window.showUserCardInline(userItem);
+                            }
+                        }
+                    }, 300);  // Timeout de 300 milisecondes pour la recherche
+                }
+            }
+        })
+		// Capture des erreurs en cas d'échec de déchiffrement
+        // La session active est nettoyé et on revient à la page d'accueil
+        .catch(err => {
+            console.error("[Graph'AD] Erreur de chargement :", err);
+            sessionStorage.removeItem("_gad_active_file");
+            GraphADCrypto.clear();
+            window.location.replace("../home.html");
+        });
+</script>
+
+</body>
+</html>

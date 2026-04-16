@@ -1,2 +1,18 @@
-# Auto detect text files and perform LF normalization
+# Normalisation des fins de ligne
 * text=auto
+
+# Fichiers texte — LF partout
+*.rs    text eol=lf
+*.toml  text eol=lf
+*.json  text eol=lf
+*.html  text eol=lf
+*.css   text eol=lf
+*.js    text eol=lf
+*.md    text eol=lf
+*.txt   text eol=lf
+
+# Fichiers binaires — pas de conversion
+*.enc   binary
+*.ico   binary
+*.png   binary
+*.exe   binary
