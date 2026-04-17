@@ -65,7 +65,7 @@ Si un message d'erreur s'affiche au démarrage :
 
 - Vérifiez que Graph'AD est bien ouvert **en tant qu'Administrateur**.
 - Vérifiez que votre Active Directory est fonctionnelle.
-- Sur des versions antérieurs à **Windows 8.1 / Windows Server 2012 R2**, le script refusera de s'exécuter de toute façon.
+- Sur des versions antérieurs à **Windows 8 / Windows Server 2012**, le script refusera de s'exécuter de toute façon.
 
 Pour tout autre problème, consultez la documentation complète ou signalez
 l'incident avec le message d'erreur exact et les logs disponibles dans
