@@ -13,10 +13,11 @@
 // =============================================================================
 
 // Appel des dépendances
+use aes::cipher::BlockModeEncrypt;
 use aes::Aes256;
 use cbc::Encryptor;
-use cbc::cipher::{BlockEncryptMut, KeyIvInit, block_padding::Pkcs7};
-use hmac::{Hmac, Mac};
+use cbc::cipher::{KeyIvInit, block_padding::Pkcs7};
+use hmac::{Hmac, Mac, KeyInit};
 use pbkdf2::pbkdf2_hmac;
 use rand::Rng;
 use sha2::Sha256;
@@ -50,7 +51,7 @@ pub fn encrypt(json_bytes: &[u8], passphrase: &str) -> Vec<u8> {
 
     // Chiffrement AES-256-CBC + PKCS7
     let cipher = Aes256CbcEnc::new(&key_enc.into(), &iv.into());
-    let ciphertext = cipher.encrypt_padded_vec_mut::<Pkcs7>(json_bytes);
+    let ciphertext = cipher.encrypt_padded_vec::<Pkcs7>(json_bytes);
 
     // Effacer la clé AES de la mémoire dès qu'on n'en a plus besoin
     key_enc.zeroize();
