@@ -1,6 +1,6 @@
 [package]
 name    = "GraphAD"
-version = "1.0.0"
+version = "1.0.1"
 edition = "2021"
 
 [[bin]]
@@ -18,11 +18,11 @@ ldap3 = { version = "0.12", features = ["gssapi"] }
 tokio = { version = "1", features = ["full"] }
 
 # Chiffrement AES-256-CBC + HMAC-SHA-256 + PBKDF2
-aes    = "0.8"
-cbc    = { version = "0.1", features = ["alloc"] }
-hmac   = "0.12"
-sha2   = "0.10"
-pbkdf2 = { version = "0.12", default-features = false, features = ["hmac"] }
+aes    = "0.9"
+cbc    = { version = "0.2", features = ["alloc"] }
+hmac   = "0.13"
+sha2   = "0.11"
+pbkdf2 = { version = "0.13", default-features = false, features = ["hmac"] }
 rand   = "0.10"
 
 # Sérialisation JSON
