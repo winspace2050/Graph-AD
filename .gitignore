@@ -30,8 +30,7 @@ src-tauri/target/
 *.AppImage
 
 # Schemas
-src-tauri/gen/schemas
-*.json
+src-tauri/gen/schemas/*.json
 
 # Graph'AD datas (do not push - data sensibility)
 data/
