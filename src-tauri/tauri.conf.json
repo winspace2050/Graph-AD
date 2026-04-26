@@ -1,0 +1,35 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "GraphAD",
+  "version": "1.0.2",
+  "identifier": "fr.graphad.app",
+
+  "app": {
+    "withGlobalTauri": true,
+    "security": {
+      "capabilities": ["default"]
+    },
+    "windows": [
+      {
+        "label": "main",
+        "title": "Graph'AD",
+        "width": 1280,
+        "height": 800,
+        "minWidth": 900,
+        "minHeight": 600,
+        "resizable": true,
+        "center": true,
+        "decorations": true,
+        "url": "home.html"
+      }
+    ]
+  },
+
+  "build": {
+    "frontendDist": "../web"
+  },
+
+  "bundle": {
+    "active": false
+  }
+}
