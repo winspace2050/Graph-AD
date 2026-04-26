@@ -10,7 +10,7 @@
 //   - Le routage des appels JS → Rust via les commandes (#[tauri::command])
 //   - L'embarquement des assets HTML/CSS/JS dans le binaire final
 //
-// A noter que main.rs est lancé à partir de build.r qui est le point d'entrée
+// A noter que main.rs est lancé à partir de build.rs qui est le point d'entrée
 // de Graph'AD.
 // =============================================================================
 
@@ -21,7 +21,6 @@ mod collector;
 mod crypto;
 
 // Appel des dépendances
-use tracing_appender::rolling;
 use tracing_subscriber::{EnvFilter};
 use tracing::{Event, Subscriber};
 use tracing_subscriber::fmt::{FmtContext, FormatEvent, FormatFields};
@@ -113,8 +112,15 @@ fn main() {
 }
 
 // Journalisation dans un fichier de logs
+// Le fichier de log suivra le schéma graphad.aaaa-mm-dd.log
 fn init_logging(log_dir: &std::path::Path) -> tracing_appender::non_blocking::WorkerGuard {
-    let file_appender = rolling::daily(log_dir, "graphad.log");
+    let file_appender = tracing_appender::rolling::RollingFileAppender::builder()
+        .rotation(tracing_appender::rolling::Rotation::DAILY)
+        .filename_prefix("graphad")
+        .filename_suffix("log")
+        .build(log_dir)
+        .expect("Impossible d'initialiser les logs");
+
     let (non_blocking, guard) = tracing_appender::non_blocking(file_appender);
 
     tracing_subscriber::fmt()
@@ -324,15 +330,18 @@ fn is_active_directory_present() -> bool {
             return true;
         }
 
-        // Méthode 3 — clé registre DSA (Directory Services Agent)
-       let mut cmd = std::process::Command::new("reg");
-        cmd.args(["query", "HKLM\\SYSTEM\\CurrentControlSet\\Services\\NTDS"])
-            .stdout(std::process::Stdio::piped())
-            .stderr(std::process::Stdio::null());
-        #[cfg(target_os = "windows")]
+        // Méthode 3 — service NTDS actif (sc query retourne RUNNING uniquement si AD tourne)
+        let mut cmd = std::process::Command::new("sc");
+        cmd.args(["query", "NTDS"])
+           .stdout(std::process::Stdio::piped())
+           .stderr(std::process::Stdio::null());
         { use std::os::windows::process::CommandExt; cmd.creation_flags(0x08000000); }
-        let reg_ok = cmd.output().map(|o| o.status.success()).unwrap_or(false);
-        reg_ok
+        if let Ok(out) = cmd.output() {
+            let stdout = String::from_utf8_lossy(&out.stdout);
+            return stdout.contains("RUNNING");
+        }
+
+        false
     }
     #[cfg(not(target_os = "windows"))]
     { false }
