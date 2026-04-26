@@ -598,38 +598,33 @@
     // Nouvelle collecte
     // ─────────────────────────────────────────────────────────────
     async function startCollect() {
-        // Définition d'un mot de passe - initialisation
-        const pp1 = document.getElementById("pp-new").value;
-        const pp2 = document.getElementById("pp-confirm").value;
+        // Définition d'une phrase de passe - initialisation
+        const pp1  = document.getElementById("pp-new").value;
+        const pp2  = document.getElementById("pp-confirm").value;
         const hint = document.getElementById("collect-hint");
 
         // On demande à l'utilisateur une phrase de passe
         // Elle doit contenir au moins 12 caractères
         // La confirmation de la phrase de passe doit être identique à celle initiale
         // Sinon, la collecte ne se lance pas
-        if (!pp1) { hint.textContent = "Saisissez une phrase de passe."; return; }
+        if (!pp1)          { hint.textContent = "Saisissez une phrase de passe."; return; }
         if (pp1.length < 12) { hint.textContent = "12 caractères minimum."; return; }
-        if (pp1 !== pp2) { hint.textContent = "Les deux phrases ne correspondent pas."; return; }
+        if (pp1 !== pp2)   { hint.textContent = "Les deux phrases ne correspondent pas."; return; }
         hint.textContent = "";
 
-        // On vérifie également qu'Active Directory est actif
-        const hasAD = await tauriInvoke("cmd_check_active_directory").catch(() => false);
-        if (!hasAD) {
-            alert(
-                "Active Directory n'est pas détecté sur cette machine.\n\n" +
-                "La collecte doit être lancée depuis un contrôleur de domaine."
-            );
+        // Vérification AD — await explicite pour capturer l'erreur avant d'ouvrir la barre
+        try {
+            await tauriInvoke("cmd_start_collect", { passphrase: pp1 });
+        } catch(e) {
+            // cmd_start_collect retourne Err() si AD absent ou autre problème pré-collecte
+            hint.textContent = e;
             return;
         }
 
+        // Si on arrive ici, la collecte a démarré en arrière-plan — ouvrir la barre
         showProgress();
 
-        // Lancer directement — les listeners sont déjà actifs depuis DOMContentLoaded
-        tauriInvoke("cmd_start_collect", { passphrase: pp1 }).catch(e => {
-            showProgressError(e);
-        });
-
-        document.getElementById("pp-new").value = "";
+        document.getElementById("pp-new").value    = "";
         document.getElementById("pp-confirm").value = "";
     }
 
