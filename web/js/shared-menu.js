@@ -324,7 +324,7 @@
                         <li>Le message d'erreur exact (touche <strong>F12</strong> → onglet <strong>Console</strong> du navigateur)</li>
                         <li>Les journaux de collecte dans le dossier
                             <code style="background:#f3f4f6;padding:1px 5px;border-radius:4px;">logs/</code>
-                            (fichiers <code style="background:#f3f4f6;padding:1px 5px;border-radius:4px;">graphad.log.AAAA-MM-JJ</code>
+                            (fichiers <code style="background:#f3f4f6;padding:1px 5px;border-radius:4px;">graphad.AAAA-MM-JJ.log</code>
 			    ouvrables via le bloc-note)</li>
                     </ul>
                 `
@@ -429,7 +429,7 @@
                         <!-- Titre et version -->
                         <div style="text-align:center; margin-bottom:20px;">
                             <div style="font-size:22px; font-weight:800; color:#4A90D9;">Graph'AD</div>
-                            <div style="font-size:12px; color:#9ca3af; margin-top:4px;">v.1.0.0</div>
+                            <div style="font-size:12px; color:#9ca3af; margin-top:4px;">v.1.0.2</div>
                             <div style="font-size:12px; color:#6b7280; margin-top:2px;">Outil de gouvernance des accès Active Directory</div>
                         </div>
 
