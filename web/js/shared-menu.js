@@ -318,11 +318,7 @@
 
                     <h3 style="font-size:15px;font-weight:700;color:#4A90D9;margin:20px 0 8px;">Signaler un problème</h3>
                     <p style="font-size:14px;line-height:1.8;">
-                        En cas d'anomalie, fournissez :
-                    </p>
-                    <ul style="font-size:14px;line-height:2;padding-left:20px;">
-                        <li>Le message d'erreur exact (touche <strong>F12</strong> → onglet <strong>Console</strong> du navigateur)</li>
-                        <li>Les journaux de collecte dans le dossier
+                        En cas d'anomalie, fournissez : Les journaux de collecte dans le dossier
                             <code style="background:#f3f4f6;padding:1px 5px;border-radius:4px;">logs/</code>
                             (fichiers <code style="background:#f3f4f6;padding:1px 5px;border-radius:4px;">graphad.AAAA-MM-JJ.log</code>
 			    ouvrables via le bloc-note)</li>
