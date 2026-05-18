@@ -231,7 +231,7 @@ async fn collect_ldap(app: &tauri::AppHandle) -> Result<Value, String> {
         // Détection des comptes de services
         let sam_lower = sam.to_lowercase();
         let is_service =
-            ["Administrator", "Guest", "krbtgt", "Administrateur", "Invité"].contains(&sam)
+            ["Administrator", "Guest", "krbtgt", "Administrateur", "Invité", "DefaultAccount"].contains(&sam)
             || sam_lower.starts_with("krbtgt_")
             || sam_lower.starts_with("svc_")
             || sam_lower.starts_with("service_")
@@ -349,6 +349,7 @@ async fn collect_ldap(app: &tauri::AppHandle) -> Result<Value, String> {
         "Dns Admins", "IIS_IUSRS",
         "Remote Desktop Users", "Remote Management Users",
         "Pre-Windows 2000 Compatible Access",
+        "System Managed Accounts Group",
     ];
     let mut technical_groups: Vec<Value> = Vec::new();  // On prépare la liste des groupes techniques
 

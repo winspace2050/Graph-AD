@@ -39,7 +39,7 @@ document.addEventListener("DOMContentLoaded", () => {
     loadActiveFile()
     .then(json => {
             
-        const isGuest = s => { const n = normStr(s); return n === "invite" || n === "guest" || n === "invites" || n === "guests"; };
+        const isGuest = s => { const n = normStr(s); return n === "invite" || n === "guest" || n === "invites" || n === "guests" || n === "defaultaccount";};
 
         // =============================================================
         // INDEX MINISEARCH

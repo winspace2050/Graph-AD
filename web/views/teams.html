@@ -165,7 +165,7 @@
             const identities = (json.business.identities || []).filter(i => {
                 if (i.meta?.isMachine || i.meta?.isServiceAccount) return false;
                 const label = normStr(i.label || "");
-                return label !== "invite" && label !== "guest";
+                return label !== "invite" && label !== "guest" && label !== "defaultaccount";
             });
             // Tous les identifiants des membres des groupes sont récupérés
             const allMemberIds = new Set(
