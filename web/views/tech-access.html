@@ -52,6 +52,7 @@
     <script src="../ux/SidePanel.js"></script>
 
     <script src="../ux/TechAccessView.js"></script>
+    <script src="../js/minisearch.min.js"></script>
 </head>
 
 <body>
@@ -238,6 +239,38 @@
             }
             // ── Fin section RODC ─────────────────────────────────────────
 
+            // =====================================================================
+            // INDEX MINISEARCH — Accès techniques
+            // Construit sur les groupes techniques et les comptes de service.
+            // La section RODC (krbtgt_xxxxx) n'est pas indexée — affichage statique.
+            // =====================================================================
+            const techDocs = [];
+            const techSeenIds = new Set();
+
+            groups.forEach(g => {
+                if (techSeenIds.has(g.id)) return;
+                techSeenIds.add(g.id);
+                techDocs.push({ id: g.id, label: g.label, description: "", type: "group" });
+            });
+            serviceAccounts.forEach(a => {
+                if (techSeenIds.has(a.id)) return;
+                techSeenIds.add(a.id);
+                techDocs.push({
+                    id: a.id,
+                    label: a.label,
+                    description: a.meta?.description || "",
+                    type: "account"
+                });
+            });
+
+            const techMiniSearch = new MiniSearch({
+                fields: ["label", "description"],
+                storeFields: ["label", "description", "type"],
+                idField: "id",
+                searchOptions: { prefix: true, fuzzy: 0.2, boost: { label: 2 } }
+            });
+            techMiniSearch.addAll(techDocs);
+
             // =====================================================================================
             // FILTRE TEMPS RÉEL — Accès techniques
             //
@@ -252,7 +285,7 @@
 
             // Fonction du filtre en temps réel
             function applyTechFilter() {
-                const q = normStr(filterInput.value.trim());
+                const q = filterInput.value.trim();
                 const resultsBox = document.getElementById("tech-filter-results");
 
                 // On attend 2 caractères pour afficher les résultats
@@ -264,14 +297,17 @@
                     return;
                 }
 
-                // Groupe dont le nom correspond
-                const matchedGroups = groups.filter(g => normStr(g.label).includes(q));
+                // MiniSearch — recherche fuzzy + préfixe sur groupes et comptes de service
+                const hits   = techMiniSearch.search(q);
+                const hitIds = new Set(hits.map(h => h.id));
 
-                // La recherche par utilisateur garde les groupes auxquel il correspond
+                // Groupe dont l'id est dans les résultats MiniSearch
+                const matchedGroups = groups.filter(g => hitIds.has(g.id));
+
+                // Comptes trouvés → remonter à leurs groupes parents
                 const matchedAccountGroupIds = new Set();
                 serviceAccounts.forEach(a => {
-                    if (!normStr(a.label).includes(q) &&
-                        !normStr(a.meta?.description || "").includes(q)) return;
+                    if (!hitIds.has(a.id)) return;
                     groups.forEach(g => {
                         if ((g.meta?.members || []).includes(a.id))
                             matchedAccountGroupIds.add(g.id);
@@ -304,12 +340,8 @@
                 } else {
                     resultsBox.innerHTML = "";
 
-                // Comptes dont le nom correspond directement à la saisie
-                // Comptes de service uniquement (isServiceAccount === true dans le JSON)
-                const matchedAccounts = serviceAccounts.filter(a =>
-                    normStr(a.label).includes(q) ||
-                    normStr(a.meta?.description || "").includes(q)
-                );
+                // Comptes dont l'id est dans les résultats MiniSearch
+                const matchedAccounts = serviceAccounts.filter(a => hitIds.has(a.id));
 
                 // Rien ne correspond dans la recherche -> aucun résultat
                 if (filteredGroups.length === 0 && matchedAccounts.length === 0) {

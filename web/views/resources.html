@@ -42,7 +42,7 @@
 <script src="../ux/SidePanel.js"></script>
 
 <script src="../ux/ResourceView.js"></script>
-
+<script src="../js/minisearch.min.js"></script>
 </head>
 <body>
 <!-- Bouton de retour au tableau de bord -->
@@ -144,43 +144,90 @@ loadActiveFile()
         // -----------------------------
         ResourceView.render("resource-list", json);
 
+        // =====================================================================
+        // INDEX MINISEARCH — Vue Ressources
+        // Construit sur partages (label + chemin) et serveurs (label).
+        // =====================================================================
+        const resDocs = [];
+        const resSeenIds = new Set();
+
+        normalizedServers.forEach(s => {
+            if (!resSeenIds.has(s.id)) {
+                resSeenIds.add(s.id);
+                resDocs.push({ id: s.id, label: s.label, path: "", type: "server" });
+            }
+            s.shares.forEach(sh => {
+                if (resSeenIds.has(sh.id)) return;
+                resSeenIds.add(sh.id);
+                resDocs.push({
+                    id:       sh.id,
+                    label:    sh.label,
+                    path:     sh.path || "",
+                    type:     "share",
+                    serverId: s.id,
+                    serverLabel: s.label
+                });
+            });
+        });
+
+        const resMiniSearch = new MiniSearch({
+            fields: ["label", "path"],
+            storeFields: ["label", "path", "type", "serverId", "serverLabel"],
+            idField: "id",
+            searchOptions: { prefix: true, fuzzy: 0.2, boost: { label: 2 } }
+        });
+        resMiniSearch.addAll(resDocs);
+
         // -------------------------------------------------------
         // FILTRE TEMPS RÉEL — Vue Ressources
-        // Cherche dans les noms de partages et de serveurs.
-        // Déplie automatiquement les serveurs avec correspondances,
-        // replie les autres.
+        // MiniSearch produit les correspondances ; le DOM est ensuite
+        // mis à jour exactement comme avant (masquage/dépliage blocs).
         // -------------------------------------------------------
         const resFilterInput = document.getElementById("resources-filter-input");
         const resFilterClear = document.getElementById("resources-filter-btn");
 
         // Fonction du filtre en temps réel
         function applyResourcesFilter() {
-            const q = (resFilterInput.value || "").trim().toLowerCase();
+            const q = (resFilterInput.value || "").trim();
             const serverBlocks = document.querySelectorAll(".resource-server-block");
 
-            serverBlocks.forEach(block => {
-                // Initialisation - préparation des donneés et éléments DOM
-                // Le but - le résultat donne un filtre en temps réel des éléments
-                const serverName  = (block.querySelector(".server-name")?.textContent || "").toLowerCase();
-                const shareItems  = block.querySelectorAll(".resource-share-item");
-                const sharesList  = block.querySelector(".resource-shares-list");
-                const arrow       = block.querySelector(".resource-server-header span");
-
-                if (!q) {
-                    // Champ de recherche vide -> tout replier, tout afficher
-                    shareItems.forEach(si => si.style.display = "");
+            if (!q || q.length < 2) {
+                // Champ vide ou trop court → tout replier, tout afficher
+                serverBlocks.forEach(block => {
+                    block.querySelectorAll(".resource-share-item").forEach(si => si.style.display = "");
+                    const sharesList = block.querySelector(".resource-shares-list");
+                    const arrow      = block.querySelector(".resource-server-header span");
                     if (sharesList) sharesList.style.display = "none";
                     if (arrow) arrow.textContent = "▶";
                     block.style.display = "";
-                    return;
-                }
+                });
+                const resFilterCount = document.getElementById("resources-filter-count");
+                if (resFilterCount) resFilterCount.style.display = "none";
+                return;
+            }
 
-                // Vérifier chaque partage
-                let hasMatch = serverName.includes(q);
+            // MiniSearch — recherche fuzzy + préfixe sur partages et serveurs
+            const hits      = resMiniSearch.search(q);
+            const hitIds    = new Set(hits.map(h => h.id));
+            // Serveurs dont un partage correspond → à déplier
+            const parentIds = new Set(
+                hits.filter(h => h.type === "share").map(h => h.serverId)
+            );
+
+            serverBlocks.forEach(block => {
+                const nodeId     = block.getAttribute("data-node-id");
+                const shareItems = block.querySelectorAll(".resource-share-item");
+                const sharesList = block.querySelector(".resource-shares-list");
+                const arrow      = block.querySelector(".resource-server-header span");
+
+                // Vérifier si le serveur ou l'un de ses partages est dans les résultats
+                const serverMatch = hitIds.has(nodeId);
+                let hasMatch = serverMatch;
+
                 shareItems.forEach(si => {
-                    const shareName = (si.querySelector(".share-name")?.textContent || "").toLowerCase();
-                    const matches   = shareName.includes(q) || serverName.includes(q);
-                    si.style.display = matches ? "" : "none";
+                    const shareNodeId = si.getAttribute("data-node-id");
+                    const matches     = hitIds.has(shareNodeId) || serverMatch;
+                    si.style.display  = matches ? "" : "none";
                     if (matches) hasMatch = true;
                 });
 
@@ -193,16 +240,15 @@ loadActiveFile()
                     if (arrow) arrow.textContent = "▼";
                 }
             });
-            // Compteur -> Permet d'indiquer le nombre de partages correspondant à la recherche
+
+            // Compteur
             const resFilterCount = document.getElementById("resources-filter-count");
             if (resFilterCount) {
-                if (!q) {
-                    resFilterCount.style.display = "none";
-                } else {
-                    const visibleShares = document.querySelectorAll(".resource-share-item:not([style*='display: none'])").length;
-                    resFilterCount.textContent = `${visibleShares} partage(s) trouvé(s)`;
-                    resFilterCount.style.display = "block";
-                }
+                const visibleShares = document.querySelectorAll(
+                    ".resource-share-item:not([style*='display: none'])"
+                ).length;
+                resFilterCount.textContent = `${visibleShares} partage(s) trouvé(s)`;
+                resFilterCount.style.display = "block";
             }
         }
 
