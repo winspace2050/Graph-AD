@@ -64,7 +64,6 @@ pub async fn collect_with_events(
     let enc_bytes = crate::crypto::encrypt(json_str.as_bytes(), passphrase);
 
     // La troisième méthode permet l'archivage horodaté des JSON
-    std::fs::create_dir_all(&data_dir).ok();
     let timestamp = Local::now().format("%Y%m%d_%H%M%S").to_string();
     let archive   = data_dir.join(format!("graphAD_{}.json.enc", timestamp));
     std::fs::write(&archive, &enc_bytes)
@@ -764,12 +763,14 @@ async fn collect_smb_shares(hostname: &str) -> Vec<Value> {
             continue;
         }
 
+        // injection via nom de partage - empêche un comportement inattendu de Get-SmbShareAccess
+        let safe_name     = ps_escape(name);
+        let safe_hostname = ps_escape(hostname);
         // On récupère les partages SMB en PowerShell one_lier
         let cmd_perms = format!(
-            "Get-SmbShareAccess -Name '{n}' -CimSession '{h}' \
+            "Get-SmbShareAccess -Name '{safe_name}' -CimSession '{safe_hostname}' \
              | Select-Object AccountName,AccessRight \
-             | ConvertTo-Json -Compress",
-            n = name, h = hostname
+             | ConvertTo-Json -Compress"
         );
         let hn = hostname.to_string();
         let perms_json = tokio::task::spawn_blocking({
@@ -867,6 +868,11 @@ fn run_ps_one_liner(hostname: &str, cmd: &str) -> String {
 // ---------------------------------------------------------------------------
 // Utilitaires
 // ---------------------------------------------------------------------------
+
+// Echappement des apostrophes - évite un comportement inattentu de Get-SmbShareAccess pour les partages
+fn ps_escape(s: &str) -> String {
+    s.replace('\'', "''")  // doublement de l'apostrophe — convention PowerShell
+}
 
 // On récupère la première valeur d'un attribut donné
 // On la retourne ensuite sous forme de chaîne de caractère
