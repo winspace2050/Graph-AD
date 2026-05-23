@@ -64,6 +64,7 @@ function escapeHtml(str) {
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;");
+        .replace(/'/g, "&#x27;");
 }
 
 // On convertit la date et l'heure brute au format ISO
