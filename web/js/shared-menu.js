@@ -495,7 +495,6 @@
 
         document.getElementById("burger-lock").addEventListener("click", () => {
             if (typeof GraphADCrypto !== "undefined") GraphADCrypto.clear();
-            GraphADCrypto.clear();
             sessionStorage.removeItem("_gad_active_file");
             window.location.replace(homePath);
         });
