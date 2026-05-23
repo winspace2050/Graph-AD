@@ -153,25 +153,31 @@ fn cmd_list_data_files(app: tauri::AppHandle) -> Vec<DataFileEntry> {
 
 /// Supprime un fichier .enc dans /data.
 /// Retourne une erreur si le fichier n'existe pas ou n'est pas dans /data.
+/// Avant comparaison, on canonicalise ce qui permet à Path::new de mieux reconnaître les ".."
 #[tauri::command]
 fn cmd_delete_data_file(app: tauri::AppHandle, path: String) -> Result<(), String> {
-    // Sécurité : vérifier que le chemin est bien dans /data avant de supprimer
-    let data_dir = data_dir(&app);
-    let target = std::path::Path::new(&path);
-    if !target.starts_with(&data_dir) {
+    let data_dir = data_dir(&app);   // PathBuf — résultat de l'appel
+    let target = std::fs::canonicalize(&path)
+        .map_err(|_| "Chemin invalide.".to_string())?;
+    let data_dir_canon = std::fs::canonicalize(&data_dir)
+        .map_err(|_| "Répertoire data introuvable.".to_string())?;
+    if !target.starts_with(&data_dir_canon) {
         return Err("Chemin non autorisé.".to_string());
     }
     std::fs::remove_file(&path).map_err(|e| e.to_string())
 }
-
 /// Lit un fichier .enc et retourne son contenu en bytes bruts.
 /// Utilisé par crypto.js pour déchiffrer le JSON en mémoire côté navigateur.
 /// Le chemin doit pointer vers un fichier dans /data.
+/// Avant comparaison, on canonicalise ce qui permet à Path::new de mieux reconnaître les ".."
 #[tauri::command]
 fn cmd_read_enc_file(app: tauri::AppHandle, path: String) -> Result<Vec<u8>, String> {
-    let data_dir = data_dir(&app);
-    let target = std::path::Path::new(&path);
-    if !target.starts_with(&data_dir) {
+    let data_dir = data_dir(&app);   // PathBuf — résultat de l'appel
+    let target = std::fs::canonicalize(&path)
+        .map_err(|_| "Chemin invalide.".to_string())?;
+    let data_dir_canon = std::fs::canonicalize(&data_dir)
+        .map_err(|_| "Répertoire data introuvable.".to_string())?;
+    if !target.starts_with(&data_dir_canon) {
         return Err("Chemin non autorisé.".to_string());
     }
     std::fs::read(&path).map_err(|e| e.to_string())
