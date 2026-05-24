@@ -557,7 +557,7 @@
             await GraphADCrypto.initFromPassphrase(pp);
             const blob = new Blob([new Uint8Array(bytes)]);
             const url  = URL.createObjectURL(blob);
-            await GraphADCrypto.loadAndDecrypt(url);  // valide HMAC + phrase
+            await GraphADCrypto.loadAndDecrypt(url, { suppressRedirect: true });
             URL.revokeObjectURL(url);
         } catch(e) {
             GraphADCrypto.clear();

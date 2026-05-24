@@ -93,7 +93,7 @@ window.GraphADCrypto = {
         const ok = await this._restorePassphrase();
         if (!ok) {
             this.clear();
-            this._redirectToLogin()
+            if (!suppressRedirect) this._redirectToLogin();
             throw new Error("Non authentifié");
         }
 
@@ -113,7 +113,7 @@ window.GraphADCrypto = {
         const cipher   = data.slice(80);
 
         // On vérifie si les données sont intègres par dérivation de la clé HMAC
-        const keyHmac     = await this._deriveKey(saltHmac, "hmac");
+        const keyHmac  = await this._deriveKey(saltHmac, "hmac");
         // Construire un buffer qui concatène saltEnc + iv + saltHmac + cipher
         const hmacData = new Uint8Array(saltEnc.length + iv.length + saltHmac.length + cipher.length);
         hmacData.set(saltEnc,  0);
@@ -122,14 +122,20 @@ window.GraphADCrypto = {
         hmacData.set(cipher,   48);
         const expectedSig = await crypto.subtle.sign("HMAC", keyHmac, hmacData);
         const expected    = new Uint8Array(expectedSig);
-        const valid = hmac.length === expected.length &&
-            hmac.every((b, i) => b === expected[i]);
+        
+        // Comparaison en temps constant
+        function timingSafeEqual(a, b) {
+            if (a.length !== b.length) return false;
+            let diff = 0;
+            for (let i = 0; i < a.length; i++) diff |= a[i] ^ b[i];
+            return diff === 0;
+        }
 
         // Une modification du HMAC ou une phrase de passe incorrecte entraine un refus d'authentification
         // La session est nettoyée et l'utilisateur est immédiatement déconnecté avant d'avoir accès aux autres pages
-        if (!valid) {
+        if (!timingSafeEqual(hmac, expected)) {
             this.clear();
-            this._redirectToLogin()
+            if (!suppressRedirect) this._redirectToLogin();
             throw new Error("HMAC invalide — fichier altéré ou phrase incorrecte");
         }
 
@@ -137,15 +143,13 @@ window.GraphADCrypto = {
         const keyEnc = await this._deriveKey(saltEnc, "enc");       // Clé de déchiffrement dérivé de saltEnc
         // AES-CBC sera la méthode de déchiffrement utilisée pour déchiffrer le JSON
         try {
-            const dec = await crypto.subtle.decrypt(
-                { name: "AES-CBC", iv }, keyEnc, cipher
-            );
+            const dec = await crypto.subtle.decrypt({ name: "AES-CBC", iv }, keyEnc, cipher);
             return JSON.parse(new TextDecoder().decode(dec));
         // Si le déchiffrement échoue, une authentification est demandé
         // La session est nettoyée et l'utilisateur est immédiatement déconnecté
         } catch {
             this.clear();
-            this._redirectToLogin()
+            if (!suppressRedirect) this._redirectToLogin();
             throw new Error("Déchiffrement échoué");
         }
     },
@@ -163,6 +167,6 @@ window.GraphADCrypto = {
         const homePath = window.location.pathname.includes("/views/")
             ? "../home.html"
             : "home.html";
-        window.location.replace(loginPath);
+        window.location.replace(homePath);
     },
 };
