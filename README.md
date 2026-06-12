@@ -14,15 +14,9 @@ Les versions de Graph'AD sont formatés comme ainsi :
 
 ## Prérequis
 
-**Configuration minimale requise :**
-- Windows Server 2012 / Windows 8
-- WebView2 109
-- Pour la collecte, un Active Directory fonctionnel
-
-
-**Configuration recommandé :**
+**Configuration requise :**
 - Windows Server 2016+ / Windows 10 1709+
-- WebView2 dernière version
+- WebView2
 - Pour la collecte, un Active Directory fonctionnel
 
 > Graph'AD plantera si vous essayer d'exécuter l'application sur une version antérieur de Windows.
@@ -65,7 +59,7 @@ Si un message d'erreur s'affiche au démarrage :
 
 - Vérifiez que Graph'AD est bien ouvert **en tant qu'Administrateur**.
 - Vérifiez que votre Active Directory est fonctionnelle.
-- Sur des versions antérieurs à **Windows 8 / Windows Server 2012**, le script refusera de s'exécuter de toute façon.
+- Sur des versions antérieurs à **Windows 10 / Windows Server 2016**, l'application refusera de s'exécuter de toute façon.
 
 Pour tout autre problème, consultez la documentation complète ou signalez
 l'incident avec le message d'erreur exact et les logs disponibles dans
