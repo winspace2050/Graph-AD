@@ -336,46 +336,66 @@
                     </div>
                     <pre style="background:#f3f4f6;font-size:12px;padding:16px;border-radius:8px;overflow-x:auto;line-height:1.8;">
         GraphAD/
-        ├─ docs/                        # Documentation du projet
         ├─ logs/                        # Journaux de collecte (auto-générés)
-        ├─ data/
-        ├─ target/                      # Artefacts de compilation Rust (auto-générés)
-        ├─ src-tauri/
-        │  │  src
-        │  │  ├─ collector.rs              # Collecte LDAP + construction du JSON
-        │  │  ├─ crypto.rs                 # Chiffrement AES-256-CBC + HMAC-SHA-256
-        │  │  └─ main.rs                   # Point d'entrée : orchestration générale
-        │  ├─ build.rs                     # Point d'entrée de compilation tauri
-        │  ├─ Cargo.toml                   # Manifeste Rust (dépendances, version)
-        │  ├─ Cargo.lock                   # Versions résolues (ne pas modifier)
-        │  └─ tauri.conf.json              # Schéma tauri de l'application
-        ├─ web/
+        ├─ data/                        # Archives chifffrés de collectes
+        │
+        ├─ src-tauri/                   # Backend Tauri
+        │  ├─ capabilities/default.json # Permissions de Graph'AD
+        │  ├─ gen/schemas/              # Schémas de toutes les permissions disponibles (générés automatiquement)
+        │  │  ├─ acl-manifests.json     # Access-list de l'application
+        │  │  ├─ capabilities.json      # Schéma spécifique définie dans capabilities/default.json
+        │  │  ├─ desktop-schema.json    # Permissions du frontend sur le backend
+        │  │  └─ windows-schema.json    # Saisi semi-automatique et vérification des types pour les fichiers de configuration Tauri
+        │  │
+        │  ├─ icons/icon.ico            # Icone de l'application
+        │  ├─ src/                      # Sources Rust
+        │  │  ├─ collector.rs           # Collecte LDAP + construction du JSON
+        │  │  ├─ crypto.rs              # Chiffrement AES-256-CBC + HMAC-SHA-256
+        │  │  └─ main.rs                # Point d'entrée : orchestration générale
+        │  │
+        │  ├─ target/                   # Résultat de la compilation cargo tauri pour l'application (en release ou en debug) (générés automatiquement)
+        │  ├─ build.rs                  # Point d'entrée de compilation tauri
+        │  ├─ Cargo.toml                # Manifest Rust (dépendances, version)
+        │  ├─ Cargo.lock                # Versions résolues (générés automatiquement, ne pas modifier)
+        │  └─ tauri.conf.json           # Configuration principale de l'application tauri
+        │
+        ├─ web/                         # Frontend de l'application
+        │  ├─ assets/full_logo.webp     # Logo complet de l'application
         │  ├─ css/style.css             # Feuille de style globale
-        │  ├─ js/
-        │  │  ├─ crypto.js              # Déchiffrement AES-256 + gestion de session
-        │  │  ├─ dashboard-loader.js    # Tableau de bord + recherche MiniSearch
-        │  │  ├─ minisearch.min.js      # Moteur de recherche (bibliothèque externe)
-        │  │  ├─ shared-menu.js         # Menu burger + modales (partagé toutes vues)
+        │  ├─ js/                       # Backend Javascript
+        │  │  ├─ crypto.js              # Déchiffrement AES-256 et gestion de session
+        │  │  ├─ dashboard-loader.js    # Tableau de bord
+        │  │  ├─ minisearch.min.js      # Moteur de recherche MiniSearch
+        │  │  ├─ shared-menu.js         # Menu burger + modales (partagé sur toutes vues)
         │  │  └─ utils.js               # Fonctions utilitaires partagées
-        │  ├─ ux/
-        │  │  ├─ ActionList.js
-        │  │  ├─ DiagnosticCard.js
-        │  │  ├─ InfrastructureTree.js
-        │  │  ├─ IntroCard.js
-        │  │  ├─ Legend.js
-        │  │  ├─ OnboardingBanner.js
-        │  │  ├─ PedagogyCard.js
-        │  │  ├─ ResourceView.js
-        │  │  ├─ SidePanel.js
-        │  │  ├─ TeamsView.js
-        │  │  └─ TechAccessView.js
-        │  ├─ views/
-        │  │  ├─ infrastructure.html
-        │  │  ├─ resources.html
-        │  │  ├─ teams.html
-        │  │  └─ tech-access.html
-        │  ├─ index.html                # Tableau de bord
+        │  │
+        │  ├─ ux/                       # Vues UX
+        │  │  ├─ ActionList.js          # Carte des actions
+        │  │  ├─ DiagnosticCard.js      # Carte de diagnostic
+        │  │  ├─ InfrastructureTree.js  # UX de la vue Infrastructure
+        │  │  ├─ IntroCard.js           # Carte introductive
+        │  │  ├─ Legend.js              # Carte de la légende
+        │  │  ├─ OnboardingBanner.js    # Bannière de bienvenue
+        │  │  ├─ PedagogyCard.js        # Carte "guide d'utilisation" de la vue
+        │  │  ├─ ResourceView.js        # UX de la vue Ressources
+        │  │  ├─ SidePanel.js           # Panneau d'information
+        │  │  ├─ TeamsView.js           # UX de la vue Equipes & Collaborateurs
+        │  │  └─ TechAccessView.js      # UX de la vue Accès techniques
+        │  │
+        │  ├─ views/                    # Pages de chaque vue
+        │  │  ├─ infrastructure.html    # Vue Infrastructure
+        │  │  ├─ resources.html         # Vue Ressources
+        │  │  ├─ teams.html             # Vue Equipes & Collaborateurs
+        │  │  └─ tech-access.html       # Vue Accès techniques
+        │  │
+        │  ├─ index.html                # Vue du tableau de bord
         │  └─ home.html                 # Page d'accueil
+        │
+        ├─ .gitattributes               # Attributs des fichiers sur le dépôt
+        ├─ .gitignore                   # Fichiers ignorés à l'import sur le dépôt
+        ├─ LICENSE                      # Licence MIT
+        ├─ Manuel d'utilisation.pdf     # Documentation publique d'utilisation
+        └─ README.md                    # Notice d'utilisation affichée sur le dépôt
                     </pre>
                 `
             }
