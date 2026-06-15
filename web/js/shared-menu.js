@@ -425,7 +425,7 @@
                         <!-- Titre et version -->
                         <div style="text-align:center; margin-bottom:20px;">
                             <div style="font-size:22px; font-weight:700; color:#203b50;">Graph<span style="color:#e95f10;">'AD</span></div>
-                            <div style="font-size:12px; color:#9ca3af; margin-top:4px;">v.1.1.1</div>
+                            <div style="font-size:12px; color:#9ca3af; margin-top:4px;">v.1.2.0</div>
                             <div style="font-size:12px; color:#6b7280; margin-top:2px;">Outil de gouvernance des accès Active Directory</div>
                         </div>
 
