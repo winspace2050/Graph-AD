@@ -47,7 +47,7 @@
             }
             .graphad-modal-header {
                 display: flex; align-items: center; justify-content: space-between;
-                background:linear-gradient(135deg,#4A90D9,#8B5CF6);
+                background:linear-gradient(135deg,#4b86b3,#e28650);
                 padding: 16px 20px; border-bottom: 1px solid #f0f0f0;
             }
             .graphad-modal-close {
@@ -97,7 +97,7 @@
                     <div style="flex:1; display:flex; flex-direction:column; overflow:hidden;">
                         <div style="display:flex; align-items:center; justify-content:space-between;
                                     padding:18px 28px; border-bottom:1px solid #e5e7eb; flex-shrink:0;
-                                    background:linear-gradient(135deg,#4A90D9,#8B5CF6);">
+                                    background:linear-gradient(135deg,#4b86b3,#e28650);">
                             <span style="font-size:17px; font-weight:700; color:#e9eff8;"
                                   id="doc-section-title">Documentation</span>
                             <button onclick="document.getElementById('doc-modal').style.display='none'"
@@ -424,8 +424,8 @@
 
                         <!-- Titre et version -->
                         <div style="text-align:center; margin-bottom:20px;">
-                            <div style="font-size:22px; font-weight:800; color:#4A90D9;">Graph'AD</div>
-                            <div style="font-size:12px; color:#9ca3af; margin-top:4px;">v.1.1.0</div>
+                            <div style="font-size:22px; font-weight:700; color:#203b50;">Graph<span style="color:#e95f10;">'AD</span></div>
+                            <div style="font-size:12px; color:#9ca3af; margin-top:4px;">v.1.1.1</div>
                             <div style="font-size:12px; color:#6b7280; margin-top:2px;">Outil de gouvernance des accès Active Directory</div>
                         </div>
 

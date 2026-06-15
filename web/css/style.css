@@ -446,7 +446,7 @@ body:has(.layout) {
    ---------------------------------------------------------------------- */
 
 .onboarding-banner {
-    background: linear-gradient(135deg, #4A90D9, #8B5CF6);
+    background: linear-gradient(135deg, #4b86b3, #e28650);
     color: white;
     padding: 24px;
     border-radius: 12px;
