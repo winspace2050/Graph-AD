@@ -69,4 +69,4 @@ le dossier `logs\` de Graph'AD.
 
 Graph'AD est, à l'heure actuelle, un projet tout jeune. Mais, tout au long de sa vie, elle aura besoin de toute demande de suggestions que vous pouvez publier dans "issues". Toute contribution est également bienvenue pour aider à maintenir le projet en vie.
 
-> **<font color="#ff0000">IMPORTANT</font>**: avant que j'oublie, si vous constatez des vulnérabilités, ne les signalez pas en public et ouvrez une conversation privée. Toute faille de sécurité ne doit pas être rendu public.
+> **<font color="#ff0000">IMPORTANT</font>**: avant que j'oublie, si vous constatez des vulnérabilités, ne les signalez pas en public et [ouvrez une conversation privée](https://github.com/winspace2050/Graph-AD/security/advisories/new). Toute faille de sécurité ne doit pas être rendu public.
